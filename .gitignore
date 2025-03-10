@@ -177,3 +177,4 @@ cython_debug/
 *-dev.ipynb
 archive/
 !/.env
+/.env
