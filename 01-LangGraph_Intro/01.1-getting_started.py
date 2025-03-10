@@ -4,7 +4,6 @@ from typing import TypedDict
 
 
 # Define the state schema for the graph.
-# Talking Point: The state schema defines the data structure passed between nodes.
 class GraphState(TypedDict):
     messages: list[dict]
 
@@ -28,7 +27,6 @@ def finalize_node(state: GraphState) -> GraphState:
 
 
 # Create the StateGraph instance with the defined state schema.
-# Talking Point: The graph orchestrates the sequence of node executions.
 graph = StateGraph(GraphState)
 
 # Add both nodes to the graph.
@@ -36,11 +34,9 @@ graph.add_node("process", process_node)
 graph.add_node("finalize", finalize_node)
 
 # Add an edge to connect the "process" node to the "finalize" node.
-# Talking Point: Edges define the flow of execution between nodes.
 graph.add_edge("process", "finalize")
 
 # Set the entry point to "process" and the finish point to "finalize".
-# Talking Point: Clearly defined start and end points ensure a predictable workflow.
 graph.set_entry_point("process")
 graph.set_finish_point("finalize")
 
