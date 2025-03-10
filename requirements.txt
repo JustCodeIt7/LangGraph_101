@@ -1,0 +1,12 @@
+langchain-core~=0.3.29
+langgraph~=0.2.37
+langsmith~=0.1.135
+rich~=13.9.2
+python-dotenv~=1.0.1
+typing_extensions~=4.11.0
+ipython~=8.27.0
+langchain-community~=0.3.2
+langchain-anthropic~=0.2.3
+pydantic~=2.9.2
+ollama~=0.3.3
+langchain-openai~=0.3.0
