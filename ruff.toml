@@ -1,0 +1,4 @@
+# But use a different line length.
+line-length = 120
+[lint.pyflakes]
+allowed-unused-imports = ["hvplot.pandas"]
