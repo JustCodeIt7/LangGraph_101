@@ -179,3 +179,5 @@ archive/
 !/.env
 /.env
 *-dev.md
+# all files in examples/ 
+examples/*
