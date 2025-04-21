@@ -18,7 +18,6 @@ from rich import print
 
 class WorkflowState(TypedDict):
     """What data travels through the graph?"""
-
     user_input: str  # the text we receive from the user / UI
     steps: List[str]  # a running log of which nodes have executed
 
@@ -33,26 +32,21 @@ class WorkflowState(TypedDict):
 
 def start(state: WorkflowState) -> dict:
     """👋  First node – greet the user and initialize the `steps` list."""
-
     # Show what we received (handy for debugging & teaching)
     print(f"\n👋  Received: {state['user_input']}")
-
     # Return a *partial* state update – here we overwrite / create `steps`
     return {"steps": ["start"]}
 
 
 def step_one(state: WorkflowState) -> dict:
     """🔧  Second node – pretend to do some processing."""
-
     print("\n🔧  Running step 1 …")
-
     # We append our name to the running `steps` list
     return {"steps": state["steps"] + ["step 1"]}
 
 
 def step_two(state: WorkflowState) -> dict:
     """✅  Third & final node – finish the workflow."""
-
     print("\n✅  Running step 2 …")
 
     return {"steps": state["steps"] + ["step 2"]}
