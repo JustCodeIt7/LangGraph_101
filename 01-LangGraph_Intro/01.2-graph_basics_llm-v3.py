@@ -7,16 +7,43 @@ import os
 from typing import List, TypedDict
 from langgraph.graph import StateGraph, END
 from langchain_ollama import ChatOllama
+from langchain_openai import ChatOpenAI
 from rich import print
+from dotenv import load_dotenv
+from os import getenv
+
+load_dotenv()
 
 # -------------------------------------------------
 # 0.  LLM setup (Ollama llama3.2)
 # -------------------------------------------------
 # Point to a running Ollama server – default localhost
+
+MODEL_NAME = 'deepseek-r1:1.5b'
 llm = ChatOllama(
     base_url=os.getenv("OLLAMA_BASE_URL", "http://localhost:11434"),
     model="llama3.2",
 )
+
+
+# -------------------------------------------------
+# 0. LLM setup OpenRouter
+# -------------------------------------------------
+# MODEL_NAME = 'google/gemma-3-27b-it:free'
+# llm = ChatOpenAI(
+#     api_key=getenv("OPENROUTER_API_KEY"),
+#     base_url='https://openrouter.ai/api/v1',
+#     model=MODEL_NAME,
+# )
+
+
+# -------------------------------------------------
+# 0. LLM setup OpenAI
+# -------------------------------------------------
+# MODEL_NAME = 'gpt-4o-mini'
+# API_KEY = getenv("OPENAI_API_KEY")
+# llm = ChatOpenAI(model=MODEL_NAME, api_key=API_KEY,
+#                  temperature=0.0)
 
 
 # -------------------------------------------------
@@ -39,20 +66,20 @@ def start(state: WorkflowState) -> dict:
 
 def step_one(state: WorkflowState) -> dict:
     """Call the LLM once and store its reply in the state."""
-    print("\n🔧  Running step 1 – calling llama3.2 …")
+    print(f"\n🔧  Running step 1 – calling {MODEL_NAME} ...")
     reply = llm.invoke(state["user_input"]).content
-    print(f"🤖  LLM reply: {reply}")
+    # print(f"🤖  LLM reply: {reply}")
     return {
-        "steps": state["steps"] + ["step 1"],
+        "steps": state["steps"] + ["step 1"],
         "llm_reply": reply,
     }
 
 
 def step_two(state: WorkflowState) -> dict:
-    """Demonstrate access to the LLM output produced in step 1."""
-    print("\n✅  Running step 2 – previous LLM reply available:")
+    """Demonstrate access to the LLM output produced in step 1."""
+    print("\n✅  Running step 2 – previous LLM reply available:")
     print(state.get("llm_reply"))
-    return {"steps": state["steps"] + ["step 2"]}
+    return {"steps": state["steps"] + ["step 2"]}
 
 
 # -------------------------------------------------
@@ -75,14 +102,15 @@ builder.set_entry_point("start")
 # -------------------------------------------------
 if __name__ == "__main__":
     app = builder.compile()
+    print(f'Using model: {MODEL_NAME}')
 
     initial_state = {
         "user_input": "Hello LangGraph! How would you describe yourself in one sentence?",
         "steps": [],
     }
-    final_state = app.invoke(initial_state)
     print("\n--- Graph Structure ---")
     print(app.get_graph().draw_ascii())
-    
+    final_state = app.invoke(initial_state)
+
     print("\n🎉  Final state:")
     print(final_state)

@@ -9,13 +9,8 @@ from rich import print
 
 
 # =========================================================
-# 1️⃣  Define the shared state for the workflow
+# 1️⃣ Define the shared state for the workflow
 # ---------------------------------------------------------
-# • LangGraph passes *one* object (the "state") from node to node.
-# • We describe that object with a `TypedDict` so type checkers (mypy, pyright) and code editors know exactly which keys exist.
-# • Each key is optional at runtime, but declaring them helps us write safer code and clearer tutorials.
-# =========================================================
-
 class WorkflowState(TypedDict):
     """What data travels through the graph?"""
     user_input: str  # the text we receive from the user / UI
@@ -23,15 +18,10 @@ class WorkflowState(TypedDict):
 
 
 # =========================================================
-# 2️⃣  Node functions – each returns a **dict of state updates**
+# 2️⃣ Node functions – each returns a **dict of state updates**
 # ---------------------------------------------------------
-# • A node is just *any* callable that accepts the current state and returns a *partial* state (i.e. only the keys you want to change / add).
-# • LangGraph merges that partial dict into the running state for the next node.
-# =========================================================
-
-
 def start(state: WorkflowState) -> dict:
-    """👋  First node – greet the user and initialize the `steps` list."""
+    """👋 First node – greet the user and initialize the `steps` list."""
     # Show what we received (handy for debugging & teaching)
     print(f"\n👋  Received: {state['user_input']}")
     # Return a *partial* state update – here we overwrite / create `steps`
@@ -39,30 +29,22 @@ def start(state: WorkflowState) -> dict:
 
 
 def step_one(state: WorkflowState) -> dict:
-    """🔧  Second node – pretend to do some processing."""
-    print("\n🔧  Running step 1 …")
+    """🔧 Second node – pretend to do some processing."""
+    print("\n🔧  Running step 1...")
     # We append our name to the running `steps` list
-    return {"steps": state["steps"] + ["step 1"]}
+    return {"steps": state["steps"] + ["step 1"]}
 
 
 def step_two(state: WorkflowState) -> dict:
-    """✅  Third & final node – finish the workflow."""
-    print("\n✅  Running step 2 …")
-
-    return {"steps": state["steps"] + ["step 2"]}
+    """✅ Third & final node – finish the workflow."""
+    print("\n✅  Running step 2 ...")
+    return {"steps": state["steps"] + ["step 2"]}
 
 
 # =========================================================
-# 3️⃣  Build the graph structure
+# 3️⃣ Build the graph structure
 # ---------------------------------------------------------
-# • `StateGraph` is a tiny DSL for wiring nodes together.
-# • Adding nodes does *not* execute them – think of it as drawing boxes.
-# • Edges tell LangGraph which node runs next.
-# • `END` is a special sentinel for termination.
-# =========================================================
-
 builder = StateGraph(WorkflowState)  # tell LangGraph what our state looks like
-
 # -- Add nodes (name, callable) ---------------------------------------------
 builder.add_node("start", start)
 builder.add_node("step_one", step_one)
@@ -73,17 +55,11 @@ builder.add_node("step_two", step_two)
 builder.add_edge("start", "step_one")
 builder.add_edge("step_one", "step_two")
 builder.add_edge("step_two", END)
-
 # Which node should kick things off?
 builder.set_entry_point("start")
-
 # =========================================================
-# 4️⃣  Compile & run once for a quick demo
+# 4️⃣ Compile & run once for a quick demo
 # ---------------------------------------------------------
-# • `compile()` freezes the graph and returns an *executable* object.
-# • We then call `.invoke(initial_state)` to run the flow exactly once.
-# • Perfect for a live demo in your video.
-# =========================================================
 
 if __name__ == "__main__":
     # 4a. Compile
