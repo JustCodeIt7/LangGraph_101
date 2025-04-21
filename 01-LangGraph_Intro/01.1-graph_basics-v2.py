@@ -26,8 +26,7 @@ class WorkflowState(TypedDict):
 
 
 # --- 2. Define Node Functions ---
-# Nodes are functions or runnables that perform actions.
-# They receive the current state and return a dictionary with updates to the state.
+# Nodes are functions or runnables that perform actions.They receive the current state and return a dictionary with updates to the state.
 
 def start_node(state: WorkflowState) -> dict:
     """
@@ -42,11 +41,8 @@ def start_node(state: WorkflowState) -> dict:
     # Get current log or initialize if it doesn't exist
     current_log = state.get("processing_log", [])
 
-    # Create the update for the state (we are overwriting here for simplicity,
-    # accumulation will be shown properly in later videos)
+    # Create the update for the state (we are overwriting here for simplicity, accumulation will be shown properly in later videos)
     log_update = ["Workflow started."]
-
-    # Simulate some work
     time.sleep(1)
 
     # Return the dictionary mapping state keys to their new values
@@ -63,7 +59,6 @@ def processing_step_node(state: WorkflowState) -> dict:
 
     # Get current log (it should exist after start_node)
     current_log = state.get("processing_log", [])
-
     # Create the update for the state (appending to the previous log)
     log_update = current_log + ["Processing step executed."]
     time.sleep(1)
@@ -72,7 +67,6 @@ def processing_step_node(state: WorkflowState) -> dict:
 
 
 # --- 3. Build the Graph ---
-
 # Instantiate the StateGraph with the defined state structure
 graph_builder = StateGraph(WorkflowState)
 
@@ -87,23 +81,15 @@ graph_builder.set_entry_point("start")
 
 # --- 6. Add Edges ---
 # Connect the nodes to define the flow of execution.
-# For a simple linear graph: start -> processing_step -> END
-
-# Edge from 'start' node to 'processing_step' node
+# For a simple linear graph: start -> processing_step -> END Edge from 'start' node to 'processing_step' node
 graph_builder.add_edge("start", "processing_step")
-
-# Edge from 'processing_step' node to the special END node.
-# END signifies that this path of the workflow is complete.
 graph_builder.add_edge("processing_step", END)
 
 # --- Compile and Run the Graph (Example Usage) ---
-
-# Compile the graph into a runnable application
 app = graph_builder.compile()
 
 # Define the initial input for the graph
-# This dictionary must match the keys expected by the entry point node
-# and the overall state definition.
+# This dictionary must match the keys expected by the entry point node and the overall state definition.
 initial_input = {"input_message": "Hello, LangGraph Basics!", "processing_log": []}
 
 print("Invoking the graph...")
@@ -118,12 +104,3 @@ print("\n--- Workflow Finished ---")
 print("Final State:")
 # The final state contains the accumulated results after reaching END.
 print(final_state)
-
-# You can visualize the graph structure (requires graphviz)
-# try:
-#     img_data = app.get_graph().draw_png()
-#     with open("video3_graph.png", "wb") as f:
-#         f.write(img_data)
-#     print("\nGraph visualization saved to video3_graph.png")
-# except Exception as e:
-#     print(f"\nCould not generate graph visualization: {e} (Graphviz might be needed)")
