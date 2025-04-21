@@ -128,6 +128,9 @@ workflow.add_edge("node_b", END) # End after node_b
 # Compile the graph into a runnable application
 app = workflow.compile()
 
+print("\n--- Graph Structure ---")
+print(app.get_graph().draw_ascii())
+
 # --- Execute and Observe State Changes ---
 
 initial_state = {
