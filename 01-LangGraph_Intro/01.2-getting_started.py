@@ -7,7 +7,7 @@ from rich import print
 
 # Create a ChatOpenAI instance with desired parameters.
 # Talking Point: LangChain’s ChatOpenAI handles the OpenAI API call.
-llm = ChatOllama(temperature=0, model="llama3.2")
+llm = ChatOllama(temperature=0, model="llama3.2", base_url="http://localhost:11434")
 
 
 # Define the state schema for the graph.

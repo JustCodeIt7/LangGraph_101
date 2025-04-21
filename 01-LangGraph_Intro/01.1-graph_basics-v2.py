@@ -2,14 +2,17 @@
 # Demonstrates building a basic linear graph with nodes and edges.
 
 # Required imports
-import os # Used to load environment variables
-import time # Used to add delays for demonstration purposes
-from typing import TypedDict, List # For defining the state structure
-import operator # Used later for state accumulation (though not heavily in this simple example)
+import os  # Used to load environment variables
+import time  # Used to add delays for demonstration purposes
+from typing import TypedDict, List  # For defining the state structure
+import operator  # Used later for state accumulation (though not heavily in this simple example)
+from rich import print
+from dotenv import load_dotenv  # Used to load environment variables from a .env file
 
-from dotenv import load_dotenv # Used to load environment variables from a .env file
+from langgraph.graph import StateGraph, END  # Core components for building the graph
 
-from langgraph.graph import StateGraph, END # Core components for building the graph
+load_dotenv()
+
 
 # --- 1. Define the State ---
 # Use TypedDict to define the structure of data that flows through the graph.
@@ -18,8 +21,9 @@ class WorkflowState(TypedDict):
     """
     Represents the shared state of our simple workflow.
     """
-    input_message: str # The initial message to process
-    processing_log: List[str] # A log to track steps taken
+    input_message: str  # The initial message to process
+    processing_log: List[str]  # A log to track steps taken
+
 
 # --- 2. Define Node Functions ---
 # Nodes are functions or runnables that perform actions.
@@ -37,16 +41,17 @@ def start_node(state: WorkflowState) -> dict:
 
     # Get current log or initialize if it doesn't exist
     current_log = state.get("processing_log", [])
-    
+
     # Create the update for the state (we are overwriting here for simplicity,
     # accumulation will be shown properly in later videos)
     log_update = ["Workflow started."]
-    
+
     # Simulate some work
-    time.sleep(1) 
-    
+    time.sleep(1)
+
     # Return the dictionary mapping state keys to their new values
     return {"processing_log": log_update}
+
 
 def processing_step_node(state: WorkflowState) -> dict:
     """
@@ -55,18 +60,16 @@ def processing_step_node(state: WorkflowState) -> dict:
     Output: A dictionary with updates for the 'processing_log'.
     """
     print("--- Executing Processing Step Node ---")
-    
+
     # Get current log (it should exist after start_node)
     current_log = state.get("processing_log", [])
-    
+
     # Create the update for the state (appending to the previous log)
-    log_update = current_log + ["Processing step executed."] 
-    
-    # Simulate some work
+    log_update = current_log + ["Processing step executed."]
     time.sleep(1)
-    
-    # Return the update
+
     return {"processing_log": log_update}
+
 
 # --- 3. Build the Graph ---
 
@@ -93,7 +96,6 @@ graph_builder.add_edge("start", "processing_step")
 # END signifies that this path of the workflow is complete.
 graph_builder.add_edge("processing_step", END)
 
-
 # --- Compile and Run the Graph (Example Usage) ---
 
 # Compile the graph into a runnable application
@@ -108,6 +110,9 @@ print("Invoking the graph...")
 # Run the graph with the initial input
 # .invoke() runs the graph synchronously and returns the final state.
 final_state = app.invoke(initial_input)
+
+print("\n--- Graph Structure ---")
+print(app.get_graph().draw_ascii())
 
 print("\n--- Workflow Finished ---")
 print("Final State:")
