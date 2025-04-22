@@ -186,4 +186,6 @@ if __name__ == "__main__":
         # Process the query
         result = agent.invoke(initial_state)
         
-        # Print the results ai!
+        # Print the results
+        print(f"Query type: {result['query_type']}")
+        print(f"Result: {result['result']}")
