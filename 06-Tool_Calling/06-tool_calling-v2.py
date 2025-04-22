@@ -109,6 +109,7 @@ def llm(state: WorkflowState):
 
 
 def final_answer(state: WorkflowState):
+    # Find the last ToolMessage in the history
     tool_msg = next(
         (m for m in reversed(state["messages"]) if isinstance(m, ToolMessage)),
         None,
@@ -116,10 +117,14 @@ def final_answer(state: WorkflowState):
     if tool_msg:
         response_text = f"Result ➜ {tool_msg.content}"
     else:
+        # If no ToolMessage, the last message should be the LLM's direct answer
         last_ai_msg = state["messages"][-1]
-        response_text = last_ai_msg.content
+        response_text = last_ai_msg.content # Use content directly
 
-    return {"messages": [AIMessage(content=response_text)]}
+    # Print the final response instead of adding to state
+    print(f"🏁 Final Answer: {response_text}")
+    # Return empty dict - no state change needed before END
+    return {}
 
 
 # ---------------------------------------------------------------------
