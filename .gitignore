@@ -181,3 +181,4 @@ archive/
 *-dev.md
 # all files in examples/ 
 examples/*
+.aider*
