@@ -1,3 +1,4 @@
+# %%
 # --- Video 5: Compiling & Running Your Graph ---
 # Demonstrates compiling a graph and using invoke, stream, batch, and config.
 import asyncio
@@ -6,7 +7,7 @@ from typing import TypedDict, List, Any
 
 from langgraph.graph import StateGraph, END
 
-
+# %%
 # --- 1. Define the State (Reusing from Video 3) ---
 class WorkflowState(TypedDict):
     """
@@ -16,7 +17,7 @@ class WorkflowState(TypedDict):
     processing_log: List[str]
     step: int
 
-
+# %%
 # --- 2. Define Node Functions (Reusing/Adapting from Video 3) ---
 def start_node(state: WorkflowState) -> dict:
     """
@@ -30,7 +31,7 @@ def start_node(state: WorkflowState) -> dict:
     time.sleep(0.5)  # Simulate work
     return {"processing_log": log_update, "step": 1}
 
-
+# %%
 def processing_step_node(state: WorkflowState) -> dict:
     """
     A node representing an intermediate processing step. Logs its execution.
@@ -42,7 +43,7 @@ def processing_step_node(state: WorkflowState) -> dict:
     time.sleep(0.5)  # Simulate work
     return {"processing_log": log_update, "step": current_step + 1}
 
-
+# %%
 # --- 3. Build the Graph (Reusing from Video 3) ---
 graph_builder = StateGraph(WorkflowState)
 graph_builder.add_node("start", start_node)
@@ -50,7 +51,7 @@ graph_builder.add_node("processing_step", processing_step_node)
 graph_builder.set_entry_point("start")
 graph_builder.add_edge("start", "processing_step")
 graph_builder.add_edge("processing_step", END)
-
+# %%
 # --- 4. Compile the Graph ---
 # The compile() method finalizes the graph structure, performs validation, and returns a runnable 'app' object.
 print("Compiling the graph...")
@@ -59,7 +60,7 @@ print("Graph compiled successfully.")
 
 print("\n--- Graph Structure ---")
 print(app.get_graph().draw_ascii())
-
+# %%
 # --- 5. Define Initial State & Config ---
 initial_state_base = {"input_message": "Hello Execution Methods!", "processing_log": [], "step": 0}
 
@@ -67,7 +68,7 @@ initial_state_base = {"input_message": "Hello Execution Methods!", "processing_l
 config_example = {"configurable": {"thread_id": "example-thread-1"}}
 config_example_batch_1 = {"configurable": {"thread_id": "batch-thread-A"}}
 config_example_batch_2 = {"configurable": {"thread_id": "batch-thread-B"}}
-
+# %%
 # --- 6. Demonstrate invoke() ---
 # Executes the graph synchronously from entry point to END for a single input. Returns the final state.
 print("\n" + "=" * 20 + " invoke() Demo " + "=" * 20)
@@ -77,7 +78,7 @@ print("\ninvoke() finished.")
 print("Final State from invoke():")
 print(final_state_invoke)
 print("=" * 55)
-
+# %%
 # --- 7. Demonstrate stream() ---
 # Executes the graph step-by-step, yielding intermediate results (chunks). Useful for real-time updates in UIs.
 print("\n" + "=" * 20 + " stream() Demo " + "=" * 20)
@@ -98,7 +99,7 @@ print("\nstream() finished.")
 print(f"Total chunks received: {len(stream_chunks)}")
 print("=" * 55)
 
-
+# %%
 # --- 8. Demonstrate batch() ---
 # Executes the graph concurrently for multiple inputs.
 # Takes a list of inputs, returns a list of final states.
@@ -127,7 +128,7 @@ for i, final_state in enumerate(final_states_batch):
     print(f"--- Input {i + 1} ---")
     print(final_state)
 print("=" * 55)
-
+# %%
 # --- 9. Demonstrate Async Methods (ainvoke, astream, abatch) ---
 # These require an async context (e.g., using asyncio).
 print("\n" + "=" * 20 + " Async Methods Demo " + "=" * 20)
