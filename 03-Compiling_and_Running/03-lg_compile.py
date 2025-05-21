@@ -4,8 +4,13 @@
 import asyncio
 import time
 from typing import TypedDict, List, Any
-
+# import nest_asyncio # Add this line
 from langgraph.graph import StateGraph, END
+from rich import print
+
+#%%
+
+#%%
 
 # %%
 # --- 1. Define the State (Reusing from Video 3) ---
@@ -16,6 +21,7 @@ class WorkflowState(TypedDict):
     input_message: str
     processing_log: List[str]
     step: int
+
 
 # %%
 # --- 2. Define Node Functions (Reusing/Adapting from Video 3) ---
@@ -133,7 +139,6 @@ print("=" * 55)
 # These require an async context (e.g., using asyncio).
 print("\n" + "=" * 20 + " Async Methods Demo " + "=" * 20)
 
-
 async def run_async_demos():
     # ainvoke
     print("\nRunning await app.ainvoke()...")
@@ -162,9 +167,16 @@ async def run_async_demos():
         print(f"--- Input {i + 1} ---")
         print(final_state)
 
-
 # Run the async demos
-asyncio.run(run_async_demos())
-print("=" * 55)
+# If in Jupyter or similar, change this:
+# asyncio.run(run_async_demos())
+# TO THIS (assuming the cell can execute top-level await):
+# await run_async_demos()
 
+print("=" * 55)
 print("\nVideo 5 Demo Complete.")
+
+# %%
+
+
+# %%
