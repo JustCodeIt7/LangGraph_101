@@ -182,3 +182,9 @@ archive/
 # all files in examples/ 
 examples/*
 .aider*
+
+*copy.ipynb
+# ignore all files with name copy at the end
+*copy.*
+# ignore all files with name copy at the end with space and then any number e.g. copy 1, copy 2, etc.
+*copy [0-9]*.*
