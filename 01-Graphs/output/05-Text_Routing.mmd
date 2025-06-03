@@ -1,0 +1,22 @@
+---
+config:
+  flowchart:
+    curve: linear
+---
+graph TD;
+	__start__([<p>__start__</p>]):::first
+	short_processor(short_processor)
+	medium_processor(medium_processor)
+	long_processor(long_processor)
+	text_router(text_router)
+	__end__([<p>__end__</p>]):::last
+	__start__ --> text_router;
+	text_router -. &nbsp;long_path&nbsp; .-> long_processor;
+	text_router -. &nbsp;medium_path&nbsp; .-> medium_processor;
+	text_router -. &nbsp;short_path&nbsp; .-> short_processor;
+	long_processor --> __end__;
+	medium_processor --> __end__;
+	short_processor --> __end__;
+	classDef default fill:#f2f0ff,line-height:1.2
+	classDef first fill-opacity:0
+	classDef last fill:#bfb6fc
