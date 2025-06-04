@@ -9,7 +9,9 @@
         "**/.DS_Store": true,
         "**/Thumbs.db": true,
         ".idea": true,
-        ".vscode": true
+        ".vscode": true,
+        "**/__pycache__": true,
+        "**/.jupytext-sync-ipynb": true
     },
     "explorerExclude.backup": {}
 }

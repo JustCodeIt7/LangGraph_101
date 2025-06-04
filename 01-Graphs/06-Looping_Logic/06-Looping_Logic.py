@@ -14,10 +14,11 @@
 # 
 
 # %% [markdown]
-# ## Setup and Imports
+# ## 1.  Setup and Imports
 # 
 
 # %%
+# * 1.  Setup and Imports
 from langgraph.graph import StateGraph, END
 import random
 from typing import TypedDict, List
@@ -30,7 +31,7 @@ from IPython.display import Image, display
 # 
 
 # %%
-# Define the shape of our state
+#  Define the shape of our state
 class SumState(TypedDict):
     numbers: List[int]
     total: int
