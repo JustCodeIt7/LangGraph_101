@@ -1,0 +1,20 @@
+---
+config:
+  flowchart:
+    curve: linear
+  theme: neo-dark
+---
+flowchart TD
+    __start__(["<p>__start__</p>"]) --> text_router("text_router")
+    text_router -. &nbsp;long_path&nbsp; .-> long_processor("long_processor")
+    text_router -. &nbsp;medium_path&nbsp; .-> medium_processor("medium_processor")
+    text_router -. &nbsp;short_path&nbsp; .-> short_processor("short_processor")
+    long_processor --> __end__(["<p>__end__</p>"])
+    medium_processor --> __end__
+    short_processor --> __end__
+     __start__:::Pine
+     __end__:::last
+    classDef default fill:#2d3748,stroke:#4a5568,stroke-width:2px,color:#e2e8f0,line-height:1.2
+    classDef first fill-opacity:0,stroke:#4a5568,color:#e2e8f0
+    classDef last fill:#553c9a,stroke:#6b46c1,color:#e2e8f0
+    classDef Pine stroke-width:1px, stroke-dasharray:none, stroke:#254336, fill:#27654A, color:#FFFFFF

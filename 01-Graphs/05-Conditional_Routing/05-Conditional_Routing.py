@@ -20,6 +20,7 @@
 # ## Imports and State Definition
 #
 
+
 # %%
 # ~ Imports
 from typing import TypedDict
@@ -35,8 +36,6 @@ from rich import print
 class NumberState(TypedDict):
     number: int
     result: int
-
-
 
 # %% [markdown]
 # ## Node Functions and Router
@@ -95,6 +94,7 @@ class NumberState(TypedDict):
 
 # %%
 class MessageState(TypedDict):
+    # * test 
     message: str
     processed_message: str
     word_count: int
