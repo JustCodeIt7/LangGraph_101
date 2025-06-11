@@ -1,0 +1,12 @@
+# Requirements for LangGraph Multi-Agent Systems Tutorial
+
+# Core LangGraph and LangChain dependencies
+langgraph>=0.2.0
+langchain-core>=0.3.0
+langchain-openai>=0.2.0
+
+# For state typing and annotations
+typing-extensions>=4.0.0
+
+# For checkpointing (SqliteSaver is part of langgraph)
+# No separate langchain-community needed just for SqliteSaver
