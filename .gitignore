@@ -189,3 +189,4 @@ examples/*
 # ignore all files with name copy at the end with space and then any number e.g. copy 1, copy 2, etc.
 *copy [0-9]*.*
 examples
+.zed
