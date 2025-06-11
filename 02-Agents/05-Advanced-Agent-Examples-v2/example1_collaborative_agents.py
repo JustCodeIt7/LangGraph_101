@@ -55,25 +55,25 @@ def market_data_search(query: str, data_type: str = "general") -> str:
     
     if "AI startup" in query and data_type == "financial":
         return """Financial Data - AI Startup Market:
-• Total funding in AI startups: $50B+ in 2024
-• Average Series A: $15M (up 25% from 2023)
-• Top funded sectors: Healthcare AI (30%), Enterprise AI (25%), AutoML (20%)
-• Valuation multiples: 8-12x revenue for established AI companies
-• IPO activity: 12 AI companies went public in 2024"""
+- Total funding in AI startups: $50B+ in 2024
+- Average Series A: $15M (up 25% from 2023)
+- Top funded sectors: Healthcare AI (30%), Enterprise AI (25%), AutoML (20%)
+- Valuation multiples: 8-12x revenue for established AI companies
+- IPO activity: 12 AI companies went public in 2024"""
     elif "AI startup" in query and data_type == "trends":
         return """Trend Analysis - AI Startup Market:
-• Generative AI dominates (40% of all AI funding)
-• Shift toward specialized AI solutions vs general platforms
-• Growing focus on AI safety and responsible AI
-• Enterprise adoption accelerating (70% of Fortune 500 piloting AI)
-• Consolidation trend: Larger players acquiring specialized startups"""
+- Generative AI dominates (40% of all AI funding)
+- Shift toward specialized AI solutions vs general platforms
+- Growing focus on AI safety and responsible AI
+- Enterprise adoption accelerating (70% of Fortune 500 piloting AI)
+- Consolidation trend: Larger players acquiring specialized startups"""
     elif data_type == "competitors":
         return f"""Competitive Landscape for {query}:
-• Major players consolidating market share
-• High barrier to entry due to compute costs
-• Differentiation through specialized domain expertise
-• Partnership strategies with cloud providers common
-• Open source vs proprietary model tensions"""
+- Major players consolidating market share
+- High barrier to entry due to compute costs
+- Differentiation through specialized domain expertise
+- Partnership strategies with cloud providers common
+- Open source vs proprietary model tensions"""
     else:
         return f"General market data for {query}: Market showing growth with increasing competition."
 
@@ -94,19 +94,19 @@ def trend_analyzer(data: str, timeframe: str = "1year") -> str:
     
     return f"""Trend Analysis ({timeframe}):
 GROWTH PATTERNS:
-• Exponential growth phase identified
-• Market maturity indicators emerging
-• Seasonal fluctuations in Q4 typically stronger
+- Exponential growth phase identified
+- Market maturity indicators emerging
+- Seasonal fluctuations in Q4 typically stronger
 
 KEY INDICATORS:
-• Investment velocity increasing 40% YoY
-• Market penetration reaching 15% of TAM
-• Customer acquisition costs stabilizing
+- Investment velocity increasing 40% YoY
+- Market penetration reaching 15% of TAM
+- Customer acquisition costs stabilizing
 
 FUTURE PROJECTIONS:
-• Continued growth expected at 25-30% CAGR
-• Market consolidation likely in next 18-24 months
-• Technology commoditization risk in 3-5 years"""
+- Continued growth expected at 25-30% CAGR
+- Market consolidation likely in next 18-24 months
+- Technology commoditization risk in 3-5 years"""
 
 @tool
 def synthesis_formatter(inputs: List[str], format_type: str = "executive_summary") -> str:
@@ -125,11 +125,11 @@ def synthesis_formatter(inputs: List[str], format_type: str = "executive_summary
     
     if format_type == "executive_summary":
         return """EXECUTIVE SUMMARY FORMAT:
-• Key findings organized by priority
-• Financial metrics highlighted
-• Strategic recommendations provided
-• Risk factors identified
-• Timeline for implementation suggested"""
+- Key findings organized by priority
+- Financial metrics highlighted
+- Strategic recommendations provided
+- Risk factors identified
+- Timeline for implementation suggested"""
     else:
         return "Formatted output combining all agent insights into structured report."
 
