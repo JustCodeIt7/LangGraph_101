@@ -252,3 +252,44 @@ def run_debate_session():
     
     final_state = None
     try:
+        for event_part in debate_graph.stream(initial_input, config, stream_mode="values"):
+            print(f"\n   --- Debate Turn ---")
+            active_node = [k for k, v in event_part.items() if isinstance(v, dict) and "messages" not in v and v is not None] # Heuristic to find active node
+            if active_node: print(f"    Active Node: {active_node[0]}")
+            
+            if event_part.get("messages"):
+                last_msg = event_part["messages"][-1]
+                sender_name = getattr(last_msg, 'name', type(last_msg).__name__)
+                print(f"    Speaker [{sender_name}]: {last_msg.content[:200]}...") # Print message snippet
+            
+            final_state = event_part
+            time.sleep(1) # Slow down for readability
+
+        print("\n--- Debate Concluded ---")
+        if final_state and final_state.get("final_summary"):
+            print("\n✅ Final Debate Summary by Moderator:")
+            print(final_state["final_summary"])
+        elif final_state and final_state.get("error_message"):
+            print(f"\n❌ Debate ended with an error: {final_state['error_message']}")
+        else:
+            print("\n⚠️ Debate finished, but no final summary was generated (check logs).")
+
+    except Exception as e:
+        print(f"\n❌ An unexpected error occurred during the debate: {e}")
+        if final_state:
+            print("\nLast known debate state:")
+            for key, value in final_state.items():
+                if key == "messages": print(f"  {key}: [{len(value)} messages]")
+                else: print(f"  {key}: {str(value)[:100]}...")
+
+
+if __name__ == "__main__":
+    run_debate_session()
+    print("\n" + "="*70)
+    print("Multi-Agent Debate Example Complete!")
+    print("Key takeaways:")
+    print("  - Multiple agents can engage in cyclic interactions like a debate.")
+    print("  - A moderator agent can manage turns and summarize.")
+    print("  - State needs to track whose turn it is, arguments, and the overall transcript.")
+    print("  - This pattern can be extended for more complex discussions or negotiations.")
+    print("="*70)
