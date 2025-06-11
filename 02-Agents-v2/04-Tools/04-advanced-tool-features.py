@@ -80,38 +80,40 @@ def search_knowledge_base(
 def demonstrate_forced_tool_use():
     """Demonstrate how to force the agent to use a specific tool."""
     console.print(Panel.fit("Demonstrating forced tool use...", title="Forced Tool Use", border_style="green"))
-    
+
     @tool
     def greet(user_name: str) -> str:
         """Greet the user by name."""
         print(f"[bold blue]Tool called:[/bold blue] Greeting {user_name}")
         return f"Hello {user_name}! It's nice to meet you."
-    
+
     # Initialize the chat model
-    model = init_chat_model("openai:gpt-4.1-nano", temperature=0)
+    model = init_chat_model("openai:gpt-4o-mini", temperature=0)
     tools = [greet]
-    
+
     # Create an agent that forces the use of the greet tool
+    # Fixed tool_choice format for OpenAI API
     agent = create_react_agent(
-        model=model.bind_tools(tools, tool_choice={"type": "tool", "name": "greet"}),
-        tools=tools
+        model=model.bind_tools(tools, tool_choice={"type": "function", "function": {"name": "greet"}}), tools=tools
     )
-    
+
     # Run an example
     user_message = "Hi, my name is Alice"
     console.print(f"[bold]User:[/bold] {user_message}\n")
     console.print("[bold]Agent (forced to use greet tool):[/bold]")
-    
+
     result = agent.invoke({"messages": [{"role": "user", "content": user_message}]})
-    
+
     if "messages" in result:
         final_message = result["messages"][-1]
         if hasattr(final_message, "content"):
             console.print(f"{final_message.content}")
         else:
             console.print(f"{final_message}")
-    
+
     console.print("\n" + "-" * 50 + "\n")
+
+
 
 ####################################################################
 ########## Step 4: Disable Parallel Tool Calling ###################
@@ -232,7 +234,7 @@ def main():
         run_example(agent, example, config)
     
     # Demonstrate forced tool use
-    demonstrate_forced_tool_use()
+    # demonstrate_forced_tool_use()
     
     # Demonstrate sequential tool calls
     demonstrate_sequential_tool_calls()
