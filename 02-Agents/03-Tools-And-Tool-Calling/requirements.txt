@@ -1,0 +1,12 @@
+# Requirements for LangGraph Tools and Tool Calling Tutorial
+
+# Core LangGraph and LangChain dependencies
+langgraph>=0.2.0
+langchain-core>=0.3.0
+langchain-openai>=0.2.0
+
+# Additional utilities used in the tutorial
+typing-extensions>=4.0.0
+
+# Optional: For enhanced output formatting
+rich>=13.0.0
