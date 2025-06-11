@@ -1,0 +1,13 @@
+# Requirements for LangGraph Human-in-the-Loop Tutorial - v2
+
+# Core LangGraph and LangChain dependencies
+langgraph>=0.2.0
+langchain-core>=0.3.0
+langchain-openai>=0.2.0
+
+# For state typing and annotations
+typing-extensions>=4.0.0
+
+# For checkpointing (SqliteSaver is built-in with langgraph,
+# but ensuring relevant langchain-community parts if needed for other savers)
+# langchain-community # Usually pulled in by langgraph if specific savers are used.
