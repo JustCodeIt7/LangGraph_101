@@ -6,7 +6,7 @@ A comprehensive guide to building and using React agents with LangGraph
 import os
 from langgraph.prebuilt import create_react_agent
 from langgraph.errors import GraphRecursionError
-
+from langchain_litellm import ChatLiteLLM
 # Set up your OpenAI API key (required for the tutorial)
 # os.environ["OPENAI_API_KEY"] = "your-api-key-here"
 
@@ -45,9 +45,16 @@ class WeatherTool:
 def create_weather_agent():
     """Create a React agent with weather capabilities."""
     print("🤖 Creating LangGraph React Agent...")
+    # llm = ChatLiteLLM(
+    #     model="ollama:llama3.2",  # Using a reliable model
+    #     temperature=0.5,  # Adjust temperature for creativity
+    #     max_tokens=1000,  # Set a reasonable token limit
+    #     top_p=0.9,  # Use top-p sampling for better quality
+    # )
     
     agent = create_react_agent(
-        model="openai:gpt-4o-mini",  # Using a reliable model
+        # model="openai:gpt-4o-mini",  # Using a reliable model
+        model="ollama:llama3.2",  # Using a reliable model
         tools=[WeatherTool.get_weather],
         debug=True  # Helpful for tutorials
     )
