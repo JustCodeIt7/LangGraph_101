@@ -4,6 +4,7 @@ import random
 from typing import TypedDict, List
 from IPython.display import Image, display
 
+
 # %%
 class SumState(TypedDict):
     numbers: List[int]
@@ -84,7 +85,7 @@ app = graph.compile()
 # Visualize the Graph (requires graphviz and pygraphviz or pydot)
 display(Image(app.get_graph().draw_mermaid_png()))
 # save the graph to a file
-with open("../output/06-Looping_Logic.png", "wb") as f:
+with open("../output/06.1-Looping_Logic.png", "wb") as f:
     f.write(app.get_graph().draw_mermaid_png())
 
 # %% [markdown]
@@ -174,6 +175,10 @@ app = graph.compile()
 
 # %%
 display(Image(app.get_graph().draw_mermaid_png()))
+
+# save the graph to a file
+with open("../output/06.2-Looping_Logic_Separate_Decision.png", "wb") as f:
+    f.write(app.get_graph().draw_mermaid_png())
 
 # %% [markdown]
 # ### Running the Second Graph
