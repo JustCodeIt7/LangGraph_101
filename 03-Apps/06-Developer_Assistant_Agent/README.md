@@ -59,3 +59,14 @@ END FUNCTION
 FUNCTION EXPLAIN_GENERATED_CODE(code, language)
   // Use an LLM to generate a natural language explanation of the code
   prompt = CREATE_CODE_EXPLANATION_PROMPT(code, language)
+  explanation = CALL_LLM_EXPLANATION(prompt)
+  RETURN explanation
+END FUNCTION
+
+FUNCTION REFACTOR_CODE(code, language, goals)
+  // Use an LLM or rule-based refactoring engine
+  prompt = CREATE_REFACTORING_PROMPT(code, language, goals)
+  refactored_code = CALL_LLM_REFACTORING(prompt)
+  RETURN refactored_code
+END FUNCTION
+```
