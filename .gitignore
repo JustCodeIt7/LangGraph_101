@@ -190,3 +190,4 @@ examples/*
 *copy [0-9]*.*
 examples
 .zed
+.roo/mcp.json

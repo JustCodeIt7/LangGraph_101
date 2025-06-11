@@ -1,0 +1,5 @@
+langgraph
+litellm
+ollama
+yfinance
+requests
