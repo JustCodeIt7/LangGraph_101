@@ -1,79 +1,186 @@
-# %%
+"""
+LangGraph React Agent Tutorial
+A comprehensive guide to building and using React agents with LangGraph
+"""
+
+import os
 from langgraph.prebuilt import create_react_agent
 from langgraph.errors import GraphRecursionError
 
+# Set up your OpenAI API key (required for the tutorial)
+# os.environ["OPENAI_API_KEY"] = "your-api-key-here"
 
-# %%
-# For this tutorial, we'll simulate a simple weather tool function
-# In a real scenario, this would call an API or perform a real task
-def get_weather(query):
-    """
-    A mock function to fetch weather information for a given location.
-    This is a placeholder for the tutorial and returns a static response.
-    Args:
-        query (str): The location to fetch weather for.
-    Returns:
-        str: A string describing the weather in the queried location.
-    """
-    print(f"Tool called: Fetching weather for {query}")
-    return f"The weather in {query} is sunny with a high of 72°F."
+class WeatherTool:
+    """A simple weather tool for demonstration purposes."""
+    
+    @staticmethod
+    def get_weather(query: str) -> str:
+        """
+        Mock weather function that simulates fetching weather data.
+        
+        Args:
+            query (str): The location to get weather for
+            
+        Returns:
+            str: Weather information for the location
+        """
+        print(f"🌤️  Tool called: Fetching weather for {query}")
+        # In a real application, this would call a weather API
+        weather_data = {
+            "san francisco": "sunny with a high of 72°F",
+            "new york": "cloudy with a high of 68°F", 
+            "london": "rainy with a high of 60°F",
+            "tokyo": "partly cloudy with a high of 75°F"
+        }
+        
+        location = query.lower()
+        if any(city in location for city in weather_data.keys()):
+            for city, weather in weather_data.items():
+                if city in location:
+                    return f"The weather in {query} is {weather}."
+        
+        return f"The weather in {query} is sunny with a high of 72°F."
 
 
-# %%
-# Step 1: Create a basic agent with a model and tools
-# Replace 'model' with an actual model in a real application
-print("Creating a basic LangGraph agent...")
-agent = create_react_agent(
-    model="openai:o3-mini",  # Placeholder model
-    tools=[get_weather],
-)
-# %%
-# Step 2: Synchronous Invocation
-# Using .invoke() to get a full response in one go
-print("\n=== Synchronous Invocation ===")
-sync_input = {"messages": [{"role": "user", "content": "What's the weather in San Francisco?"}]}
-sync_response = agent.invoke(sync_input)
-print("Synchronous Response:")
-print(sync_response)
-# %%
-# Step 3: Asynchronous Invocation
-# Using await .ainvoke() for async execution (simulated here with a comment)
-print("\n=== Asynchronous Invocation ===")
-# In a real async environment, you would use:
-# response = await agent.ainvoke({"messages": [{"role": "user", "content": "What's the weather in SF?"}]})
-print("Asynchronous invocation would work similarly to sync but with 'await' in an async context.")
-# %%
-# Step 4: Input and Output Formats
-# Demonstrating different input formats
-print("\n=== Input Formats ===")
-input_string = {"messages": "Hello"}  # Converted to HumanMessage
-input_dict = {"messages": {"role": "user", "content": "Hi there"}}
-input_list = {"messages": [{"role": "user", "content": "Hey!"}]}
-input_custom = {"messages": [{"role": "user", "content": "Hello"}], "user_name": "Alice"}
-print("Different input formats are supported:")
-print("- String input:", input_string)
-print("- Dictionary input:", input_dict)
-print("- List of messages:", input_list)
-print("- Custom state input:", input_custom)
-# Output format includes all messages exchanged during execution
-print("Output is a dictionary with 'messages' and optional custom state fields.")
+def create_weather_agent():
+    """Create a React agent with weather capabilities."""
+    print("🤖 Creating LangGraph React Agent...")
+    
+    agent = create_react_agent(
+        model="openai:gpt-4o-mini",  # Using a reliable model
+        tools=[WeatherTool.get_weather],
+        debug=True  # Helpful for tutorials
+    )
+    
+    print("✅ Agent created successfully!")
+    return agent
 
-# %%
-# Step 5: Streaming Output
-# Using .stream() for incremental updates
-print("\n=== Streaming Output (Synchronous) ===")
-stream_input = {"messages": [{"role": "user", "content": "What's the weather in SF?"}]}
-for chunk in agent.stream(stream_input, stream_mode="updates"):
-    print("Stream chunk:", chunk)
 
-# Step 6: Max Iterations to Prevent Infinite Loops
-# Setting a recursion limit to control execution
-print("\n=== Max Iterations with Recursion Limit ===")
-max_iterations = 3
-recursion_limit = 2 * max_iterations + 1
-agent_with_limit = agent.with_config(recursion_limit=recursion_limit)
-try:
-    limit_response = agent_with_limit.invoke({"messages": [{"role": "user", "content": "What's the weather in SF?"}]})
-    print("Response with recursion limit:", limit_response)
-except GraphRecursionError:
-    print("Agent stopped due to max iterations.")
+def demo_synchronous_invocation(agent):
+    """Demonstrate synchronous agent invocation."""
+    print("\n" + "="*50)
+    print("🔄 DEMO 1: Synchronous Invocation")
+    print("="*50)
+    
+    user_message = "What's the weather like in San Francisco?"
+    print(f"User: {user_message}")
+    
+    response = agent.invoke({
+        "messages": [{"role": "user", "content": user_message}]
+    })
+    
+    # Extract the final response
+    final_message = response["messages"][-1]
+    print(f"Agent: {final_message.content}")
+    
+    return response
+
+
+def demo_streaming_output(agent):
+    """Demonstrate streaming agent responses."""
+    print("\n" + "="*50)
+    print("🌊 DEMO 2: Streaming Output")
+    print("="*50)
+    
+    user_message = "What's the weather in New York and London?"
+    print(f"User: {user_message}")
+    print("Agent response (streaming):")
+    
+    stream_input = {"messages": [{"role": "user", "content": user_message}]}
+    
+    for chunk in agent.stream(stream_input, stream_mode="updates"):
+        if chunk:
+            # Pretty print streaming updates
+            for node_name, node_data in chunk.items():
+                if "messages" in node_data:
+                    message = node_data["messages"][-1]
+                    if hasattr(message, 'content') and message.content:
+                        print(f"  📝 {node_name}: {message.content[:100]}...")
+
+
+def demo_input_formats(agent):
+    """Demonstrate different input formats."""
+    print("\n" + "="*50)
+    print("📝 DEMO 3: Different Input Formats")
+    print("="*50)
+    
+    # Format 1: Simple string
+    print("1. String input:")
+    response1 = agent.invoke({"messages": "Hello, I'm interested in weather!"})
+    print(f"   Response: {response1['messages'][-1].content[:50]}...")
+    
+    # Format 2: Dictionary format
+    print("\n2. Dictionary input:")
+    response2 = agent.invoke({
+        "messages": {"role": "user", "content": "What can you help me with?"}
+    })
+    print(f"   Response: {response2['messages'][-1].content[:50]}...")
+    
+    # Format 3: List of messages (conversation history)
+    print("\n3. Conversation history:")
+    response3 = agent.invoke({
+        "messages": [
+            {"role": "user", "content": "Hi there!"},
+            {"role": "assistant", "content": "Hello! How can I help you today?"},
+            {"role": "user", "content": "What's the weather in Tokyo?"}
+        ]
+    })
+    print(f"   Response: {response3['messages'][-1].content[:50]}...")
+
+
+def demo_recursion_limits(agent):
+    """Demonstrate recursion limits and error handling."""
+    print("\n" + "="*50)
+    print("🛡️ DEMO 4: Recursion Limits & Safety")
+    print("="*50)
+    
+    # Set a low recursion limit for demonstration
+    max_iterations = 2
+    recursion_limit = 2 * max_iterations + 1
+    
+    print(f"Setting recursion limit to: {recursion_limit}")
+    
+    agent_with_limit = agent.with_config(recursion_limit=recursion_limit)
+    
+    try:
+        response = agent_with_limit.invoke({
+            "messages": [{"role": "user", "content": "What's the weather in SF?"}]
+        })
+        print("✅ Agent completed within recursion limit")
+        print(f"Final response: {response['messages'][-1].content[:100]}...")
+        
+    except GraphRecursionError as e:
+        print("⚠️ Agent stopped due to recursion limit")
+        print(f"Error: {e}")
+
+
+def main():
+    """Main tutorial function."""
+    print("🎬 Welcome to the LangGraph React Agent Tutorial!")
+    print("=" * 60)
+    
+    try:
+        # Create the agent
+        agent = create_weather_agent()
+        
+        # Run all demos
+        demo_synchronous_invocation(agent)
+        demo_streaming_output(agent)
+        demo_input_formats(agent)
+        demo_recursion_limits(agent)
+        
+        print("\n" + "="*60)
+        print("🎉 Tutorial completed successfully!")
+        print("📚 Key takeaways:")
+        print("   • React agents can use tools to solve complex tasks")
+        print("   • Multiple invocation methods: sync, async, streaming")
+        print("   • Flexible input formats for different use cases")
+        print("   • Safety features like recursion limits prevent infinite loops")
+        
+    except Exception as e:
+        print(f"❌ Error occurred: {e}")
+        print("💡 Make sure your OpenAI API key is set correctly!")
+
+
+if __name__ == "__main__":
+    main()
