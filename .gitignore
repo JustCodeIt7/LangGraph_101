@@ -195,4 +195,4 @@ examples
 .env*
 .flaskenv*
 !.env.project
-!.env.vault
+!.env.vault!/.vscode/
