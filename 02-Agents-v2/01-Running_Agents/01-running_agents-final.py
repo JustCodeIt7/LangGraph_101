@@ -2,6 +2,7 @@
 from langgraph.prebuilt import create_react_agent
 from langgraph.errors import GraphRecursionError
 from rich import print
+
 #%%
 ####################################################################
 ########## Step 1: Create a Basic Agent ############################
@@ -29,6 +30,7 @@ agent = create_react_agent(
     model="ollama:llama3.2",  # Placeholder model
     tools=[get_weather]
 )
+
 #%%
 ####################################################################
 ########## Step 2: Synchronous Invocation ##########################
@@ -40,6 +42,7 @@ sync_input = {"messages": [{"role": "user", "content": "What's the weather in Sa
 sync_response = agent.invoke(sync_input)
 print("Synchronous Response:")
 print(sync_response)
+
 #%%
 ####################################################################
 ########## Step 3: Asynchronous Invocation #########################
@@ -50,6 +53,8 @@ print("\n=== Asynchronous Invocation ===")
 # In a real async environment, you would use:
 # response = await agent.ainvoke({"messages": [{"role": "user", "content": "What's the weather in SF?"}]})
 print("Asynchronous invocation would work similarly to sync but with 'await' in an async context.")
+
+
 #%%
 ####################################################################
 ########## Step 4: Input and Output Formats ########################
@@ -68,6 +73,7 @@ print("- List of messages:", input_list)
 print("- Custom state input:", input_custom)
 # Output format includes all messages exchanged during execution
 print("Output is a dictionary with 'messages' and optional custom state fields.")
+
 #%%
 ####################################################################
 ########## Step 5: Streaming Output ###############################
@@ -78,6 +84,7 @@ print("\n=== Streaming Output (Synchronous) ===")
 stream_input = {"messages": [{"role": "user", "content": "What's the weather in SF?"}]}
 for chunk in agent.stream(stream_input, stream_mode="updates"):
     print("Stream chunk:", chunk)
+
 #%%
 ####################################################################
 ########## Step 6: Max Iterations to Prevent Infinite Loops ########
@@ -96,12 +103,5 @@ try:
 except GraphRecursionError:
     print("Agent stopped due to max iterations.")
 
-####################################################################
-########## Conclusion ##############################################
-####################################################################
 
-print("\n=== Tutorial Summary ===")
-print("In this tutorial, we covered running LangGraph agents with synchronous and asynchronous methods,")
-print("different input/output formats, streaming for incremental updates, and setting max iterations.")
-print("Experiment with these concepts to build powerful agent-based applications!")
 #%%
