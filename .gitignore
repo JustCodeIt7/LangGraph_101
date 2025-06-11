@@ -191,3 +191,8 @@ examples/*
 examples
 .zed
 .roo/mcp.json
+
+.env*
+.flaskenv*
+!.env.project
+!.env.vault
