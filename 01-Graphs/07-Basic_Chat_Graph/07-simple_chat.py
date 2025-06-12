@@ -30,7 +30,9 @@ def create_llm():
     console.print("🤖 Initializing LLM with Ollama (llama3.2)...", style="bold blue")
     
     llm = ChatLiteLLM(
-        model="ollama/llama3.2",  # Using llama3.2 model as specified
+        # model="ollama/llama3.2:1b",  # Using llama3.2 model as specified
+        model="ollama/qwen3:0.6b",  # Using llama3.2 model as specified
+        # model="ollama/qwen3:1.7b",  # Using llama3.2 model as specified
         api_base="http://localhost:11434",  # Default Ollama local server
         temperature=0.7,
         max_tokens=1000,
