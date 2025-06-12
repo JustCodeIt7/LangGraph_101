@@ -13,5 +13,14 @@
         "**/__pycache__": true,
         "**/.jupytext-sync-ipynb": true
     },
-    "explorerExclude.backup": {}
+    "explorerExclude.backup": {},
+    "python.testing.unittestArgs": [
+        "-v",
+        "-s",
+        "./01-Graphs",
+        "-p",
+        "test_*.py"
+    ],
+    "python.testing.pytestEnabled": false,
+    "python.testing.unittestEnabled": true
 }
