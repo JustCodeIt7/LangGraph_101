@@ -11,7 +11,13 @@
         ".idea": true,
         ".vscode": true,
         "**/__pycache__": true,
-        "**/.jupytext-sync-ipynb": true
+        "**/.jupytext-sync-ipynb": true,
+        "**/.roo": true,
+        ".roo": true,
+        "**/.zed": true,
+        ".zed": true,
+        "**/.mypy_cache": true,
+        ".mypy_cache": true
     },
     "explorerExclude.backup": {},
     "python.testing.unittestArgs": [
