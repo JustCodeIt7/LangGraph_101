@@ -196,3 +196,4 @@ examples
 .flaskenv*
 !.env.project
 !.env.vault!/.vscode/
+!/.aiignore
