@@ -207,12 +207,26 @@ def main():
     # Add edges
     graph.add_edge("initialize", "user_input")
 
+    def decide_after_user_input(state: ChatState) -> str:
+        """
+        Decide what to do after processing user input.
+
+        Returns:
+            "end" - User wants to exit
+            "continue_input" - User entered a command, stay in input loop
+            "ai_response" - User entered a message, generate AI response
+        """
+        if state['exit_requested']:
+            return 'end'
+        elif state['command_processed']:
+            return 'continue_input'
+        else:
+            return 'ai_response'
+
     # Add conditional edge after user input
     graph.add_conditional_edges(
         "user_input",
-        lambda state: "end" if state["exit_requested"]
-                     else "continue_input" if state["command_processed"]
-                     else "ai_response",
+        decide_after_user_input,
         {
             "ai_response": "ai_response",
             "continue_input": "user_input",
@@ -226,7 +240,7 @@ def main():
         should_continue,
         {
             # "continue": "user_input",  # Loop back for more conversation
-            "continue_input": "user_input",  # Direct back to input (shouldn't happen here)
+            # "continue_input": "user_input",  # Direct back to input (shouldn't happen here)
             "end": END,  # End the conversation
         },
     )
@@ -259,11 +273,11 @@ def run_tests():
     console.print("\n" + "="*80, style="bold magenta")
     console.print("🧪 RUNNING TESTS", style="bold magenta")
     console.print("="*80 + "\n", style="bold magenta")
-    
+
     # Test counters
     tests_passed = 0
     tests_failed = 0
-    
+
     # ========================================
     # Test 1: State Initialization
     # ========================================
@@ -281,12 +295,12 @@ def run_tests():
     except Exception as e:
         console.print(f"❌ State initialization test failed: {e}\n", style="red")
         tests_failed += 1
-    
+
     # ========================================
     # Test 2: Command Processing
     # ========================================
     console.print("📋 Test 2: Command Processing", style="bold yellow")
-    
+
     # Test exit commands
     for exit_cmd in ["exit", "quit", "bye"]:
         try:
@@ -303,7 +317,7 @@ def run_tests():
         except Exception as e:
             console.print(f"  ❌ Exit command '{exit_cmd}' test failed: {e}", style="red")
             tests_failed += 1
-    
+
     # Test verbose command
     try:
         state = ChatState()
@@ -317,7 +331,7 @@ def run_tests():
     except Exception as e:
         console.print(f"  ❌ Verbose command test failed: {e}", style="red")
         tests_failed += 1
-    
+
     # Test help command
     try:
         state = ChatState()
@@ -330,7 +344,7 @@ def run_tests():
     except Exception as e:
         console.print(f"  ❌ Help command test failed: {e}\n", style="red")
         tests_failed += 1
-    
+
     # ========================================
     # Test 3: Regular Message Processing
     # ========================================
@@ -350,12 +364,12 @@ def run_tests():
     except Exception as e:
         console.print(f"❌ Regular message processing test failed: {e}\n", style="red")
         tests_failed += 1
-    
+
     # ========================================
     # Test 4: Flow Control Logic
     # ========================================
     console.print("📋 Test 4: Flow Control Logic", style="bold yellow")
-    
+
     # Test exit flow
     try:
         state = ChatState()
@@ -367,7 +381,7 @@ def run_tests():
     except Exception as e:
         console.print(f"  ❌ Exit flow test failed: {e}", style="red")
         tests_failed += 1
-    
+
     # Test command processed flow
     try:
         state = ChatState()
@@ -380,7 +394,7 @@ def run_tests():
     except Exception as e:
         console.print(f"  ❌ Command processed flow test failed: {e}", style="red")
         tests_failed += 1
-    
+
     # Test normal flow
     try:
         state = ChatState()
@@ -393,7 +407,7 @@ def run_tests():
     except Exception as e:
         console.print(f"  ❌ Normal flow test failed: {e}\n", style="red")
         tests_failed += 1
-    
+
     # ========================================
     # Test 5: LLM Connection (Mock)
     # ========================================
@@ -411,7 +425,7 @@ def run_tests():
     except:
         console.print("⚠️  Ollama server not running (this is OK for testing)\n", style="yellow")
         tests_passed += 1
-    
+
     # ========================================
     # Test 6: Graph Construction
     # ========================================
@@ -423,7 +437,7 @@ def run_tests():
         test_graph.set_entry_point("test_node")
         test_graph.add_edge("test_node", END)
         test_app = test_graph.compile()
-        
+
         # Test graph execution
         result = test_app.invoke({"messages": [], "exit_requested": False})
         assert "messages" in result
@@ -432,7 +446,7 @@ def run_tests():
     except Exception as e:
         console.print(f"❌ Graph construction test failed: {e}\n", style="red")
         tests_failed += 1
-    
+
     # ========================================
     # Test Summary
     # ========================================
@@ -442,7 +456,7 @@ def run_tests():
     console.print(f"  ✅ Passed: {tests_passed}", style="bold green")
     console.print(f"  ❌ Failed: {tests_failed}", style="bold red")
     console.print("="*80 + "\n", style="bold magenta")
-    
+
     return tests_failed == 0
 
 # ================================================================================================
@@ -451,7 +465,7 @@ def run_tests():
 
 if __name__ == "__main__":
     import sys
-    
+
     # Check for test flag
     if len(sys.argv) > 1 and sys.argv[1] in ["--test", "-t"]:
         # Run tests

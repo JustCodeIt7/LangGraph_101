@@ -7,8 +7,11 @@ from langgraph.graph import StateGraph, END
 from langchain_litellm import ChatLiteLLM
 from rich.console import Console
 from rich.prompt import Prompt
+import os
+import subprocess
+import tempfile
+from pathlib import Path
 from IPython.display import Image, display
-
 #%%
 # =============================================
 # STATE DEFINITIONS AND DATA STRUCTURES
@@ -20,6 +23,7 @@ class ChatState(TypedDict):
     current_response: str
     exit_requested: bool
     verbose_mode: bool
+    command_processed: bool  # New field to track command processing
 
 
 # Initialize the console for rich output
@@ -29,8 +33,7 @@ console = Console()
 # ===============================================
 # LLM INITIALIZATION AND CONFIGURATION
 # ==============================================
-
-def create_llm(model='qwen3:0.6b') -> ChatLiteLLM:
+def create_llm(model='ollama/qwen3:0.6b') -> ChatLiteLLM:
     """Create a LiteLLM instance using Ollama with llama3.2 model."""
     console.print("🤖 Initializing LLM with Ollama (llama3.2)...", style="bold blue")
 
@@ -43,7 +46,6 @@ def create_llm(model='qwen3:0.6b') -> ChatLiteLLM:
 
     console.print("✅ LLM initialized successfully!", style="bold green")
     return llm
-create_llm()
 
 #%%
 # =============================================
@@ -55,6 +57,7 @@ def initialize_state(state: ChatState) -> ChatState:
     state["current_response"] = ""
     state["exit_requested"] = False
     state["verbose_mode"] = False
+    state["command_processed"] = False  # Initialize new field
     return state
 
 #%%
@@ -92,7 +95,6 @@ def process_user_input(state: ChatState) -> ChatState:
 # =========================================
 # AI RESPONSE GENERATION
 # ========================================
-
 def generate_ai_response(state: ChatState, llm: ChatLiteLLM) -> ChatState:
     """Generate AI response using the LLM."""
     # Skip AI response if exit requested, command was processed, or no messages
@@ -144,21 +146,34 @@ def should_continue(state: ChatState) -> str:
     if state["exit_requested"]:
         console.print("[bold yellow]Exiting chat...[/bold yellow]")
         return "end"
+    elif state["command_processed"]:
+        # If a command was processed, go back to user input without AI response
+        return "continue_input"
     else:
-        return "continue"
+        return "continue_input"
+
+def decide_after_user_input(state: ChatState) -> str:
+    """
+    Decide what to do after processing user input.
+
+    Returns:
+        "end" - User wants to exit
+        "continue_input" - User entered a command, stay in input loop
+        "ai_response" - User entered a message, generate AI response
+    """
+    if state['exit_requested']:
+        return 'end'
+    elif state['command_processed']:
+        return 'continue_input'
+    else:
+        return 'ai_response'
+
+
 
 #%%
 # =====================================================
 # MAIN APPLICATION LOGIC AND GRAPH CONFIGURATION
 # ====================================================
-def decide_after_user_input(state: ChatState) -> str:
-    """Decide what to do after processing user input."""
-    if state["exit_requested"]:
-        return "end"
-    elif state["command_processed"]:
-        return "continue_input"
-    else:
-        return "ai_response"
 
 def main():
     """Main function to run the terminal chat application."""
@@ -173,130 +188,57 @@ def main():
     llm = create_llm()
 
     # ========================================
-    # Graph Construction - Building the Conversation Flow
+    # Graph Construction
     # ========================================
-
-    # STEP 1: Create the main graph object
-    # StateGraph is like a flowchart that manages conversation state
-    # Think of it as a blueprint for how the conversation should flow
+    # Build the graph
     graph = StateGraph(ChatState)
 
-    # STEP 2: Add nodes (the "work stations" in our conversation flow)
-    # Each node is a function that does a specific job and can modify the state
+    # Add nodes
+    graph.add_node("initialize", initialize_state)
+    graph.add_node("user_input", process_user_input)
+    graph.add_node("ai_response", lambda state: generate_ai_response(state, llm))
 
-    # Node 1: Initialize the conversation
-    # This sets up the initial state when the chat starts
-    graph.add_node('initialize', initialize_state)
+    # Add edges
+    graph.add_edge("initialize", "user_input")
 
-    # Node 2: Handle user input
-    # This processes what the user types and updates the state
-    graph.add_node('user_input', process_user_input)
-
-    # Node 3: Generate AI response
-    # This creates the AI's reply using the LLM
-    # lambda state: creates an anonymous function that calls generate_ai_response with our LLM
-    graph.add_node('ai_response', lambda state: generate_ai_response(state, llm))
-
-    # STEP 3: Add simple edges (direct connections)
-    # Edges tell the graph how to move from one node to another
-    # This creates a direct path: initialize → user_input (always happens)
-    graph.add_edge('initialize', 'user_input')
-
-    # STEP 4: Add conditional edges (decision points)
-    # These are like "if-then" statements that decide where to go next based on the state
-    # Decision point 1: After user input, what should we do?
-    def decide_after_user_input(state: ChatState) -> str:
-        """
-        Decide what to do after processing user input.
-
-        Returns:
-            "end" - User wants to exit
-            "continue_input" - User entered a command, stay in input loop
-            "ai_response" - User entered a message, generate AI response
-        """
-        if state['exit_requested']:
-            return 'end'
-        elif state['command_processed']:
-            return 'continue_input'
-        else:
-            return 'ai_response'
-
-    # CONDITIONAL EDGE 1: After processing user input, where should we go?
+    # Add conditional edge after user input
     graph.add_conditional_edges(
-        source="user_input",                    # Starting from user_input node
-        path=decide_after_user_input,           # Use our decision function
-        path_map={                              # Map decisions to destinations
-            "ai_response": "ai_response",       # Generate AI response
-            "continue_input": "user_input",     # Go back to user input
-            "end": END,                         # Exit the conversation
+        "user_input",
+        decide_after_user_input,
+        {
+            "ai_response": "ai_response",
+            "continue_input": "user_input",
+            "end": END,
+        },
+    )
+    # Add conditional edge for looping or ending after AI response
+    graph.add_conditional_edges(
+        "ai_response",
+        should_continue,
+        {
+            # "continue": "user_input",  # Loop back for more conversation
+            "continue_input": "user_input",  # Direct back to input (shouldn't happen here)
+            "end": END,  # End the conversation
         },
     )
 
-    # CONDITIONAL EDGE 2: After AI response, should we continue or stop?
-    # Decision point 2: After AI response, continue or end?
-    def decide_after_ai_response(state: ChatState) -> str:
-        """
-        Decide what to do after AI generates a response.
-
-        Returns:
-            "continue" - Keep the conversation going
-            "end" - End the conversation
-        """
-        if state['exit_requested']:
-            return 'end'
-        else:
-            return 'continue'
-
-    graph.add_conditional_edges(
-        source='ai_response',  # Starting from ai_response node
-        path=decide_after_ai_response,  # Use our decision function
-        path_map={  # Map decisions to destinations
-            'continue': 'user_input',  # Continue conversation
-            'end': END,  # Exit the conversation
-        },
-    )
-    # graph.add_conditional_edges(
-    #     'ai_response',  # Starting point: AI just generated a response
-    #     # Decision function: should_continue is defined elsewhere
-    #     # It returns either 'continue' or 'end' based on the state
-    #     should_continue,
-    #     # Path mapping: what to do with each possible return value
-    #     {
-    #         'continue': 'user_input',  # Keep chatting → go back to user input
-    #         'end': END,  # Stop chatting → END the graph
-    #     },
-    # )
-    #
-    # STEP 5: Set the starting point
-    # This tells the graph which node to run first when we start the conversation
-    graph.set_entry_point('initialize')
-
-    # STEP 6: Compile the graph
-    # This "bakes" the graph into an executable application
-    # After compilation, we can't add more nodes or edges, but we can run it
+    # Set the entry point
+    graph.set_entry_point("initialize")
     app = graph.compile()
+    # app.get_graph().draw_mermaid_png()
+    with open('chat_graph.mmd', 'w') as f:
+        f.write(app.get_graph().draw_mermaid())
 
-    # print the graph structure for debugging
-    console.print("\n[bold green]Graph Structure:[/bold green]")
-
-
-    # save the graph to a file for later use
-    with open('langgraph_flow.png', 'wb') as f:
+    # save the graph image
+    with open('chat_graph.png', 'wb') as f:
         f.write(app.get_graph().draw_mermaid_png())
 
+
     # ========================================
-    # Application Execution - Running the Graph
+    # Application Execution
     # ========================================
     app.invoke({})
 
-    console.print('\n[bold blue]Thank you for using LangGraph Terminal Chat![/bold blue]')
-
-
-# ===================================================
-# APPLICATION ENTRY POINT
-# ===================================================
-if __name__ == '__main__':
-    main()
 
 
 #%%
@@ -305,4 +247,3 @@ if __name__ == '__main__':
 # ==================================================
 if __name__ == "__main__":
     main()
-#%%
