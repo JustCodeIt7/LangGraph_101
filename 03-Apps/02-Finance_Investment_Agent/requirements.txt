@@ -1,0 +1,35 @@
+# Finance & Investment Agent Requirements
+
+# Core LangGraph and LangChain dependencies
+langgraph>=0.2.0
+langchain>=0.3.0
+langchain-core>=0.3.0
+langchain-litellm>=0.2.0
+
+# LiteLLM for model integration
+litellm>=1.44.0
+
+# Data handling
+pydantic>=2.0.0
+
+# CLI and output formatting
+rich>=13.0.0
+
+# Date and time utilities
+python-dateutil>=2.8.0
+
+# JSON handling (built-in, but listed for clarity)
+# json - built-in
+
+# HTTP requests for API calls (future enhancement)
+requests>=2.31.0
+
+# Optional: For real financial data APIs
+# yfinance>=0.2.0  # Yahoo Finance
+# alpha-vantage>=2.3.0  # Alpha Vantage API
+# finnhub-python>=2.4.0  # Finnhub API
+
+# Optional: For data analysis and visualization
+# pandas>=2.0.0
+# matplotlib>=3.7.0
+# numpy>=1.24.0
