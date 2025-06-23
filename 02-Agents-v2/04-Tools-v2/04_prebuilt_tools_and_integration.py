@@ -156,52 +156,54 @@ def get_file_info(filepath: str) -> str:
     parts = filepath.replace("\\", "/").split("/")
     filename = parts[-1]
     directory = "/".join(parts[:-1]) + "/"
-    
-    if directory in MOCK_FILE_SYSTEM and filename in MOCK_FILE_SYSTEM[directory]:
-        # Simulate file info
-        extension = filename.split(".")[-1] if "." in filename else "no extension"
-        size = len(filename) * 1024  # Mock size calculation
-        
-        return f"""📄 File Information for '{filepath}':
+
+    if directory not in MOCK_FILE_SYSTEM or filename not in MOCK_FILE_SYSTEM[directory]:
+        return f"❌ File '{filepath}' not found"
+    # Simulate file info
+    extension = filename.split('.')[-1] if '.' in filename else 'no extension'
+    size = len(filename) * 1024  # Mock size calculation
+
+    return f"""📄 File Information for '{filepath}':
   - Name: {filename}
   - Directory: {directory}
   - Extension: {extension}
   - Size: {size} bytes (simulated)
   - Type: {get_file_type(extension)}
   - Last Modified: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} (simulated)"""
-    else:
-        return f"❌ File '{filepath}' not found"
+
 
 def get_file_type(extension: str) -> str:
     """Helper function to determine file type."""
     types = {
-        "pdf": "PDF Document",
-        "txt": "Text File",
-        "py": "Python Script",
-        "ipynb": "Jupyter Notebook",
-        "md": "Markdown Document",
-        "jpg": "JPEG Image",
-        "csv": "CSV Data File",
-        "exe": "Executable File",
-        "conf": "Configuration File"
+        'pdf': 'PDF Document',
+        'txt': 'Text File',
+        'py': 'Python Script',
+        'ipynb': 'Jupyter Notebook',
+        'md': 'Markdown Document',
+        'jpg': 'JPEG Image',
+        'csv': 'CSV Data File',
+        'exe': 'Executable File',
+        'conf': 'Configuration File',
     }
-    return types.get(extension.lower(), "Unknown File Type")
+    return types.get(extension.lower(), 'Unknown File Type')
+
 
 # Example 4: API Integration Tools
-print("\n4. API Integration Simulation Tools")
-print("-" * 40)
+print('\n4. API Integration Simulation Tools')
+print('-' * 40)
 
-@tool("weather_api")
+
+@tool('weather_api')
 def get_weather(city: str) -> str:
     """Get weather information for a city (simulated API call)."""
     # Simulate different weather conditions for different cities
     weather_data = {
-        "new york": {"temp": 22, "condition": "Partly Cloudy", "humidity": 65},
-        "london": {"temp": 15, "condition": "Rainy", "humidity": 80},
-        "tokyo": {"temp": 28, "condition": "Sunny", "humidity": 70},
-        "paris": {"temp": 18, "condition": "Overcast", "humidity": 75},
+        'new york': {'temp': 22, 'condition': 'Partly Cloudy', 'humidity': 65},
+        'london': {'temp': 15, 'condition': 'Rainy', 'humidity': 80},
+        'tokyo': {'temp': 28, 'condition': 'Sunny', 'humidity': 70},
+        'paris': {'temp': 18, 'condition': 'Overcast', 'humidity': 75},
     }
-    
+
     city_key = city.lower()
     if city_key in weather_data:
         data = weather_data[city_key]
@@ -215,37 +217,37 @@ def get_weather(city: str) -> str:
     else:
         return f"❌ Weather data not available for '{city}'. Try: New York, London, Tokyo, or Paris"
 
-@tool("news_api")
-def get_latest_news(category: str = "technology") -> str:
+
+@tool('news_api')
+def get_latest_news(category: str = 'technology') -> str:
     """Get latest news headlines by category (simulated API call)."""
     news_data = {
-        "technology": [
-            "AI Breakthrough: New Language Model Achieves Human-Level Performance",
-            "Tech Giants Announce Major Partnership in Quantum Computing",
-            "Open Source Framework Revolutionizes Machine Learning Development"
+        'technology': [
+            'AI Breakthrough: New Language Model Achieves Human-Level Performance',
+            'Tech Giants Announce Major Partnership in Quantum Computing',
+            'Open Source Framework Revolutionizes Machine Learning Development',
         ],
-        "business": [
-            "Global Markets Show Strong Growth in Q4",
-            "Startup Raises $50M for Sustainable Energy Solutions",
-            "E-commerce Platform Reports Record Sales"
+        'business': [
+            'Global Markets Show Strong Growth in Q4',
+            'Startup Raises $50M for Sustainable Energy Solutions',
+            'E-commerce Platform Reports Record Sales',
         ],
-        "science": [
-            "Scientists Discover New Exoplanet in Habitable Zone",
-            "Medical Breakthrough: Gene Therapy Shows Promise",
-            "Climate Research Reveals Surprising Ocean Patterns"
-        ]
+        'science': [
+            'Scientists Discover New Exoplanet in Habitable Zone',
+            'Medical Breakthrough: Gene Therapy Shows Promise',
+            'Climate Research Reveals Surprising Ocean Patterns',
+        ],
     }
-    
+
     category_key = category.lower()
-    if category_key in news_data:
-        headlines = news_data[category_key]
-        result = f"📰 Latest {category.title()} News:\n"
-        for i, headline in enumerate(headlines, 1):
-            result += f"  {i}. {headline}\n"
-        result += f"\n[This is simulated news data from {datetime.now().strftime('%Y-%m-%d')}]"
-        return result
-    else:
+    if category_key not in news_data:
         return f"❌ News category '{category}' not available. Try: technology, business, or science"
+    headlines = news_data[category_key]
+    result = f'📰 Latest {category.title()} News:\n'
+    for i, headline in enumerate(headlines, 1):
+        result += f'  {i}. {headline}\n'
+    result += f'\n[This is simulated news data from {datetime.now().strftime("%Y-%m-%d")}]'
+    return result
 
 # Example 5: Comprehensive Agent with All Tool Types
 print("\n5. Creating Comprehensive Agent")
@@ -291,11 +293,11 @@ def convert_units(value: float, from_unit: str, to_unit: str, unit_type: str) ->
             # Special handling needed for temperature
         }
     }
-    
+
     unit_type = unit_type.lower()
     from_unit = from_unit.lower()
     to_unit = to_unit.lower()
-    
+
     if unit_type == "temperature":
         # Handle temperature conversion separately
         if from_unit == "celsius":
@@ -312,13 +314,12 @@ def convert_units(value: float, from_unit: str, to_unit: str, unit_type: str) ->
                 result = (value - 32) * 5/9 + 273.15
             else:
                 result = value
-        else:  # kelvin
-            if to_unit == "celsius":
-                result = value - 273.15
-            elif to_unit == "fahrenheit":
-                result = (value - 273.15) * 9/5 + 32
-            else:
-                result = value
+        elif to_unit == 'celsius':
+            result = value - 273.15
+        elif to_unit == 'fahrenheit':
+            result = (value - 273.15) * 9 / 5 + 32
+        else:
+            result = value
     elif unit_type in conversions:
         conversion_table = conversions[unit_type]
         if from_unit in conversion_table and to_unit in conversion_table:
@@ -329,7 +330,7 @@ def convert_units(value: float, from_unit: str, to_unit: str, unit_type: str) ->
             return f"❌ Unknown units for {unit_type}: {from_unit} or {to_unit}"
     else:
         return f"❌ Unknown unit type: {unit_type}. Supported: length, weight, temperature"
-    
+
     return f"🔄 Unit Conversion: {value} {from_unit} = {result:.4f} {to_unit}"
 
 # Create comprehensive agent with all tools

@@ -39,14 +39,11 @@ def calculate_tip(bill_amount: float, tip_percentage: float = 15.0) -> str:
 def create_tool_agent():
     """Create a LangGraph agent with the defined tools."""
     console.print(Panel.fit("Creating a LangGraph agent with tools...", title="Setup", border_style="green"))
-    
-    # Create the agent with our tools
-    agent = create_react_agent(
-        model="ollama:llama3.2",  # You can also use "openai:gpt-4.1-nano"
-        tools=[multiply, get_weather, calculate_tip]
+
+    return create_react_agent(
+        model='ollama:llama3.2',  # You can also use "openai:gpt-4.1-nano"
+        tools=[multiply, get_weather, calculate_tip],
     )
-    
-    return agent
 
 ####################################################################
 ########## Step 3: Run Examples with the Agent #####################

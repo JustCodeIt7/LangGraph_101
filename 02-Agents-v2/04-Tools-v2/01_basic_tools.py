@@ -96,12 +96,12 @@ def convert_temperature(temperature: float, from_unit: str, to_unit: str) -> str
 def analyze_string(text: str) -> dict:
     """Analyze a string and return various statistics about it."""
     return {
-        "length": len(text),
-        "word_count": len(text.split()),
-        "vowel_count": sum(1 for char in text.lower() if char in 'aeiou'),
-        "consonant_count": sum(1 for char in text.lower() if char.isalpha() and char not in 'aeiou'),
-        "uppercase_count": sum(1 for char in text if char.isupper()),
-        "lowercase_count": sum(1 for char in text if char.islower())
+        'length': len(text),
+        'word_count': len(text.split()),
+        'vowel_count': sum(char in 'aeiou' for char in text.lower()),
+        'consonant_count': sum(bool(char.isalpha() and char not in 'aeiou') for char in text.lower()),
+        'uppercase_count': sum(bool(char.isupper()) for char in text),
+        'lowercase_count': sum(bool(char.islower()) for char in text),
     }
 
 # Create agent with decorated tools

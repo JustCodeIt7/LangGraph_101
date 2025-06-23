@@ -44,9 +44,9 @@ def fetch_user_data(user_id: int) -> Dict[str, Any]:
 def parse_date(date_string: str) -> str:
     """Parse a date string into a standardized format."""
     print(f"[bold blue]Tool called:[/bold blue] Parsing date: {date_string}")
-    
+
     import datetime
-    
+
     # This will raise a ValueError if the date format is invalid
     try:
         # Try different date formats
@@ -56,11 +56,11 @@ def parse_date(date_string: str) -> str:
                 return f"Parsed date: {date_obj.strftime('%Y-%m-%d')}"
             except ValueError:
                 continue
-        
+
         # If we get here, none of the formats worked
         raise ValueError(f"Could not parse date: {date_string}")
     except Exception as e:
-        raise ValueError(f"Invalid date format: {date_string}. Please use YYYY-MM-DD format.")
+        raise ValueError(f'Invalid date format: {date_string}. Please use YYYY-MM-DD format.') from e
 
 ####################################################################
 ########## Step 2: Create Agents with Different Error Handling #####

@@ -69,13 +69,17 @@ def perform_secure_operation(
     # Check if user is authenticated (from config)
     is_authenticated = config.get("configurable", {}).get("authenticated", False)
     user_role = config.get("configurable", {}).get("user_role", "guest")
-    
+
     if not is_authenticated:
-        return "Error: User not authenticated. Please log in first."
-    
-    if user_role != "admin" and operation.lower() in ["delete", "modify", "admin"]:
+        return 'Error: User not authenticated. Please log in first.'
+
+    if user_role != 'admin' and operation.lower() in {
+        'delete',
+        'modify',
+        'admin',
+    }:
         return f"Error: Insufficient permissions. Role '{user_role}' cannot perform '{operation}'"
-    
+
     return f"✓ Successfully performed '{operation}' operation for authenticated {user_role}"
 
 # Create agent with hidden argument tools
