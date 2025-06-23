@@ -1,0 +1,17 @@
+Deep Learning Notes
+==================
+
+Deep learning is a subset of machine learning that uses neural networks with multiple layers.
+
+Key concepts:
+- Backpropagation
+- Gradient descent
+- Activation functions
+- Convolutional layers
+- Recurrent layers
+
+Applications:
+- Computer vision
+- Natural language processing
+- Speech recognition
+- Game playing (AlphaGo, etc.)

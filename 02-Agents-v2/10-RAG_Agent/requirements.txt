@@ -1,0 +1,23 @@
+# Core RAG Agent Dependencies
+langchain==0.1.0
+langchain-community==0.0.10
+langgraph==0.0.20
+langchain-core==0.1.0
+
+# Vector Database
+chromadb==0.4.22
+
+# Document Processing
+pypdf==3.17.4
+unstructured==0.11.8
+unstructured[md]==0.11.8
+
+# Ollama Integration
+ollama==0.1.7
+
+# Additional utilities
+pathlib2==2.3.7
+typing-extensions==4.8.0
+
+# Optional: For better text processing
+tiktoken==0.5.2
