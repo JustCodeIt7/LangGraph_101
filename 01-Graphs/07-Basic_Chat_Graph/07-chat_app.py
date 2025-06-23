@@ -143,14 +143,11 @@ def generate_ai_response(state: ChatState, llm: ChatLiteLLM) -> ChatState:
 
 def should_continue(state: ChatState) -> str:
     """Conditional logic to determine whether to continue the conversation or end."""
-    if state["exit_requested"]:
-        console.print("[bold yellow]Exiting chat...[/bold yellow]")
-        return "end"
-    elif state["command_processed"]:
+    if not state['exit_requested']:
         # If a command was processed, go back to user input without AI response
         return "continue_input"
-    else:
-        return "continue_input"
+    console.print('[bold yellow]Exiting chat...[/bold yellow]')
+    return 'end'
 
 def decide_after_user_input(state: ChatState) -> str:
     """
