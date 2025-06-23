@@ -67,28 +67,24 @@ def initialize_state(state: ChatState) -> ChatState:
 
 def process_user_input(state: ChatState) -> ChatState:
     """Process user input and add it to the messages."""
-    try:
-        # Get user input
-        user_input = Prompt.ask("\n[bold cyan]You[/bold cyan]")
+    # Get user input
+    user_input = Prompt.ask('\n[bold cyan]You[/bold cyan]')
 
-        # Check for exit command
-        if user_input.lower() in ["/exit", "/quit", "/bye"]:
-            state["exit_requested"] = True
-            return state
-
-        # Check for verbose mode toggle
-        if user_input.lower() == "verbose":
-            state["verbose_mode"] = not state["verbose_mode"]
-            console.print(f"[bold yellow]Verbose mode {'enabled' if state['verbose_mode'] else 'disabled'}[/bold yellow]")
-            return state
-
-        # Add user message to the conversation history
-        state["messages"].append({"role": "user", "content": user_input})
-
+    # Check for exit command
+    if user_input.lower() in ['/exit', '/quit', '/bye']:
+        state['exit_requested'] = True
         return state
-    except KeyboardInterrupt:
-        state["exit_requested"] = True
+
+    # Check for verbose mode toggle
+    if user_input.lower() == 'verbose':
+        state['verbose_mode'] = not state['verbose_mode']
+        console.print(f'[bold yellow]Verbose mode {"enabled" if state["verbose_mode"] else "disabled"}[/bold yellow]')
         return state
+
+    # Add user message to the conversation history
+    state['messages'].append({'role': 'user', 'content': user_input})
+
+    return state
 
 
 #%%
@@ -244,4 +240,3 @@ def main():
 # ==================================================
 if __name__ == "__main__":
     main()
-# %%
