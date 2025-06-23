@@ -54,72 +54,74 @@ def task_analyzer_node(state: TaskTrackingAgentState):
     Analyzes user input to identify tasks, update progress, or manage task queue.
     """
     print("---ANALYZING TASK REQUEST---")
-    
-    messages = state["messages"]
+
+    messages = state['messages']
     if not messages:
         return state
-    
+
     latest_message = messages[-1]
     if not isinstance(latest_message, HumanMessage):
         return state
-    
+
     user_input = latest_message.content.lower()
-    
+
     # Simple task detection logic (in real implementation, use NLP)
     if "new task" in user_input or "add task" in user_input:
-        # Extract task details (simplified)
-        task_id = f"task_{len(state['tasks']) + 1}"
-        new_task: Task = {
-            "id": task_id,
-            "title": f"Task from: {user_input[:50]}...",
-            "description": latest_message.content,
-            "status": TaskStatus.PENDING,
-            "priority": 3,  # Default priority
-            "created_at": datetime.now().isoformat(),
-            "completed_at": None,
-            "subtasks": [],
-            "progress": 0.0
-        }
-        
-        # Update state
-        updated_tasks = state["tasks"].copy()
-        updated_tasks[task_id] = new_task
-        
-        updated_queue = state["task_queue"].copy()
-        updated_queue.append(task_id)
-        # Sort by priority (higher priority first)
-        updated_queue.sort(key=lambda tid: updated_tasks[tid]["priority"], reverse=True)
-        
-        print(f"Added new task: {task_id}")
-        return {
-            "tasks": updated_tasks,
-            "task_queue": updated_queue,
-            "current_task_id": task_id
-        }
-    
-    elif "complete" in user_input and state.get("current_task_id"):
+        return _extracted_from_task_analyzer_node_20(state, user_input, latest_message)
+    elif 'complete' in user_input and state.get('current_task_id'):
         # Mark current task as completed
-        current_id = state["current_task_id"]
-        if current_id in state["tasks"]:
-            updated_tasks = state["tasks"].copy()
-            updated_tasks[current_id] = {
-                **updated_tasks[current_id],
-                "status": TaskStatus.COMPLETED,
-                "progress": 1.0,
-                "completed_at": datetime.now().isoformat()
-            }
-            
-            # Update session stats
-            updated_stats = state["session_stats"].copy()
-            updated_stats["completed"] = updated_stats.get("completed", 0) + 1
-            
-            print(f"Completed task: {current_id}")
-            return {
-                "tasks": updated_tasks,
-                "session_stats": updated_stats
-            }
-    
+        current_id = state['current_task_id']
+        if current_id in state['tasks']:
+            return _extracted_from_task_analyzer_node_53(state, current_id)
     return state
+
+
+# TODO Rename this here and in `task_analyzer_node`
+def _extracted_from_task_analyzer_node_53(state, current_id):
+    updated_tasks = state['tasks'].copy()
+    updated_tasks[current_id] = {
+        **updated_tasks[current_id],
+        'status': TaskStatus.COMPLETED,
+        'progress': 1.0,
+        'completed_at': datetime.now().isoformat(),
+    }
+
+    # Update session stats
+    updated_stats = state['session_stats'].copy()
+    updated_stats['completed'] = updated_stats.get('completed', 0) + 1
+
+    print(f'Completed task: {current_id}')
+    return {'tasks': updated_tasks, 'session_stats': updated_stats}
+
+
+# TODO Rename this here and in `task_analyzer_node`
+def _extracted_from_task_analyzer_node_20(state, user_input, latest_message):
+    # Extract task details (simplified)
+    task_id = f'task_{len(state["tasks"]) + 1}'
+    new_task: Task = {
+        'id': task_id,
+        'title': f'Task from: {user_input[:50]}...',
+        'description': latest_message.content,
+        'status': TaskStatus.PENDING,
+        'priority': 3,  # Default priority
+        'created_at': datetime.now().isoformat(),
+        'completed_at': None,
+        'subtasks': [],
+        'progress': 0.0,
+    }
+
+    # Update state
+    updated_tasks = state['tasks'].copy()
+    updated_tasks[task_id] = new_task
+
+    updated_queue = state['task_queue'].copy()
+    updated_queue.append(task_id)
+    # Sort by priority (higher priority first)
+    updated_queue.sort(key=lambda tid: updated_tasks[tid]['priority'], reverse=True)
+
+    print(f'Added new task: {task_id}')
+    return {'tasks': updated_tasks, 'task_queue': updated_queue, 'current_task_id': task_id}
+
 
 def progress_tracker_node(state: TaskTrackingAgentState):
     """
@@ -161,28 +163,28 @@ def task_assistant_node(state: TaskTrackingAgentState):
     Provides AI assistance based on current task context and progress.
     """
     print("---TASK ASSISTANT RESPONDING---")
-    
-    messages = state["messages"]
-    current_task_id = state.get("current_task_id")
-    overall_progress = state.get("overall_progress", 0.0)
-    
+
+    messages = state['messages']
+    current_task_id = state.get('current_task_id')
+    overall_progress = state.get('overall_progress', 0.0)
+
     # Build context about current state
-    context_info = []
-    context_info.append(f"Overall Progress: {overall_progress:.1%}")
-    context_info.append(f"Total Tasks: {len(state['tasks'])}")
-    
+    context_info = [
+        f'Overall Progress: {overall_progress:.1%}',
+        f'Total Tasks: {len(state["tasks"])}',
+    ]
     if current_task_id and current_task_id in state["tasks"]:
         current_task = state["tasks"][current_task_id]
-        context_info.append(f"Current Task: {current_task['title']}")
-        context_info.append(f"Task Status: {current_task['status'].value}")
-        context_info.append(f"Task Progress: {current_task['progress']:.1%}")
-    
-    # Pending tasks summary
-    pending_tasks = [task for task in state["tasks"].values()
-                    if task["status"] == TaskStatus.PENDING]
-    if pending_tasks:
+        context_info.extend(
+            (
+                f'Current Task: {current_task["title"]}',
+                f'Task Status: {current_task["status"].value}',
+                f'Task Progress: {current_task["progress"]:.1%}',
+            )
+        )
+    if pending_tasks := [task for task in state['tasks'].values() if task['status'] == TaskStatus.PENDING]:
         context_info.append(f"Pending Tasks: {len(pending_tasks)}")
-    
+
     system_prompt = f"""
     You are a task management assistant. Here's the current context:
     
@@ -197,15 +199,15 @@ def task_assistant_node(state: TaskTrackingAgentState):
     
     Be concise and actionable in your responses.
     """
-    
+
     llm = ChatOpenAI(model="gpt-3.5-turbo", temperature=0.7)
-    
+
     # Create messages with system context
     context_messages = [SystemMessage(content=system_prompt)] + messages
-    
+
     response = llm.invoke(context_messages)
     print(f"Assistant Response: {response.content}")
-    
+
     return {"messages": [AIMessage(content=response.content)]}
 
 # Build the graph

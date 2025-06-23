@@ -13,6 +13,7 @@ Key Features:
 - Memory of past interactions and learned preferences
 """
 
+import contextlib
 import os
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
@@ -68,54 +69,50 @@ def profile_analyzer_node(state: ContextAwareAgentState):
     Analyzes user messages to update profile and detect preferences.
     """
     print("---ANALYZING USER PROFILE---")
-    
-    messages = state["messages"]
+
+    messages = state['messages']
     if not messages:
         return state
-    
+
     latest_message = messages[-1]
     if not isinstance(latest_message, HumanMessage):
         return state
-    
+
     user_input = latest_message.content.lower()
-    
+
     # Update interaction count
     updated_profile = state["user_profile"].copy()
     updated_profile["interaction_count"] += 1
-    
+
     # Detect communication style preference
     if any(word in user_input for word in ["please", "thank you", "could you"]):
         if updated_profile["preferred_style"] != CommunicationStyle.FORMAL:
             updated_profile["preferred_style"] = CommunicationStyle.FORMAL
-            print(f"Detected formal communication preference")
+            print('Detected formal communication preference')
     elif any(word in user_input for word in ["yo", "hey", "sup", "cool", "awesome"]):
         if updated_profile["preferred_style"] != CommunicationStyle.CASUAL:
             updated_profile["preferred_style"] = CommunicationStyle.CASUAL
-            print(f"Detected casual communication preference")
-    
+            print('Detected casual communication preference')
+
     # Detect expertise level
     technical_terms = ["algorithm", "api", "database", "framework", "architecture", "optimization"]
-    if any(term in user_input for term in technical_terms):
-        if updated_profile["expertise_level"] == "beginner":
-            updated_profile["expertise_level"] = "intermediate"
-            print(f"Updated expertise level to intermediate")
-    
+    if any(term in user_input for term in technical_terms) and updated_profile['expertise_level'] == 'beginner':
+        updated_profile['expertise_level'] = 'intermediate'
+        print('Updated expertise level to intermediate')
+
     # Extract interests/topics
     interest_keywords = ["interested in", "like", "love", "enjoy", "passion", "hobby"]
     for keyword in interest_keywords:
         if keyword in user_input:
             # Simple interest extraction (in real implementation, use NLP)
             words = user_input.split()
-            try:
+            with contextlib.suppress(ValueError):
                 idx = words.index(keyword.split()[-1])
                 if idx + 1 < len(words):
                     potential_interest = words[idx + 1]
                     if potential_interest not in updated_profile["interests"]:
                         updated_profile["interests"].append(potential_interest)
-                        print(f"Added interest: {potential_interest}")
-            except ValueError:
-                pass
-    
+                        print(f'Added interest: {potential_interest}')
     return {"user_profile": updated_profile}
 
 def context_tracker_node(state: ContextAwareAgentState):

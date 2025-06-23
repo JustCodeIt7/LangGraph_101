@@ -140,15 +140,15 @@ if __name__ == "__main__":
         # Add the new human message to the current list of messages in the state
         # The `add_messages` utility in the state definition will handle appending correctly
         current_state["messages"] = [HumanMessage(content=user_input)]
-        
-        print(f"---SENDING TO GRAPH---")
+
+        print('---SENDING TO GRAPH---')
         print(f"Current state before graph: {current_state}")
 
         # Stream events to see the state evolve
         final_event = None
         for event_part in agent_with_state_graph.stream(current_state, stream_mode="values"):
             # event_part is the full state after each node's execution in this mode
-            print(f"---GRAPH EVENT---")
+            print('---GRAPH EVENT---')
             # print(f"Node: {list(event_part.keys())[0]}") # This is tricky with stream_mode="values"
             print(f"Full state in event: {event_part}")
             final_event = event_part # Keep the last state

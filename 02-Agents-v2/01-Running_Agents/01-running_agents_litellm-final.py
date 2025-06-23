@@ -38,7 +38,7 @@ class WeatherTool:
         }
 
         location = query.lower()
-        if any(city in location for city in weather_data.keys()):
+        if any(city in location for city in weather_data):
             for city, weather in weather_data.items():
                 if city in location:
                     return f"The weather in {query} is {weather}."
@@ -200,37 +200,72 @@ def main():
     print("=" * 70)
 
     try:
-        # Create the agent
-        agent = create_weather_agent()
-
-        # Run all demos
-        demo_synchronous_invocation(agent)
-        demo_streaming_output(agent)
-        demo_input_formats(agent)
-        demo_recursion_limits(agent)
-        demo_model_switching()
-
-        print("\n" + "=" * 70)
-        print("🎉 Tutorial completed successfully!")
-        print("📚 Key takeaways:")
-        print("   • React agents can use tools to solve complex tasks")
-        print("   • LiteLLM makes it easy to switch between different LLM providers")
-        print("   • Multiple invocation methods: sync, async, streaming")
-        print("   • Flexible input formats for different use cases")
-        print("   • Safety features like recursion limits prevent infinite loops")
-        print("   • Model switching is as simple as changing the model parameter")
-
-        print("\n🔧 LiteLLM Benefits:")
-        print("   • Unified interface for 100+ LLM providers")
-        print("   • Easy switching between OpenAI, Anthropic, Google, local models")
-        print("   • Cost tracking and logging capabilities")
-        print("   • Fallback and retry mechanisms")
-
+        _extracted_from_main_8()
     except Exception as e:
-        print(f"❌ Error occurred: {e}")
-        print("💡 Make sure your chosen model is available!")
-        print("   • For Ollama: ensure the model is pulled locally")
-        print("   • For cloud providers: set the appropriate API keys")
+        print(f'❌ Error occurred: {e}')
+        _extracted_from_main_18(
+            '💡 Make sure your chosen model is available!',
+            '   • For Ollama: ensure the model is pulled locally',
+            '   • For cloud providers: set the appropriate API keys',
+        )
+
+
+# TODO Rename this here and in `main`
+def _extracted_from_main_8():
+    # Create the agent
+    agent = create_weather_agent()
+
+    # Run all demos
+    demo_synchronous_invocation(agent)
+    demo_streaming_output(agent)
+    demo_input_formats(agent)
+    demo_recursion_limits(agent)
+    demo_model_switching()
+
+    print('\n' + '=' * 70)
+    _extracted_from_main_18(
+        '🎉 Tutorial completed successfully!',
+        '📚 Key takeaways:',
+        '   • React agents can use tools to solve complex tasks',
+    )
+    _extracted_from_main_21(
+        '   • LiteLLM makes it easy to switch between different LLM providers',
+        '   • Multiple invocation methods: sync, async, streaming',
+        '   • Flexible input formats for different use cases',
+    )
+    _extracted_from_main_24(
+        '   • Safety features like recursion limits prevent infinite loops',
+        '   • Model switching is as simple as changing the model parameter',
+        '\n🔧 LiteLLM Benefits:',
+    )
+    _extracted_from_main_28(
+        '   • Unified interface for 100+ LLM providers',
+        '   • Easy switching between OpenAI, Anthropic, Google, local models',
+        '   • Cost tracking and logging capabilities',
+    )
+    print('   • Fallback and retry mechanisms')
+
+
+# TODO Rename this here and in `main`
+def _extracted_from_main_28(arg0, arg1, arg2):
+    print(arg0)
+    print(arg1)
+    print(arg2)
+
+
+# TODO Rename this here and in `main`
+def _extracted_from_main_24(arg0, arg1, arg2):
+    _extracted_from_main_28(arg0, arg1, arg2)
+
+
+# TODO Rename this here and in `main`
+def _extracted_from_main_21(arg0, arg1, arg2):
+    _extracted_from_main_24(arg0, arg1, arg2)
+
+
+# TODO Rename this here and in `main`
+def _extracted_from_main_18(arg0, arg1, arg2):
+    _extracted_from_main_21(arg0, arg1, arg2)
 
 
 if __name__ == "__main__":
