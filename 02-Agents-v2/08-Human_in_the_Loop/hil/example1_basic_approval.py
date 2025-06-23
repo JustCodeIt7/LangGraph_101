@@ -57,8 +57,8 @@ def create_basic_approval_graph():
             tagline = state.get("tagline", "")
             product_name = state.get("product_name", "")
             attempts = state.get("attempts", 0)
-            
-            print(f"\n--- Human Approval Required ---")
+
+            print('\n--- Human Approval Required ---')
             print(f"Product: {product_name}")
             print(f"Generated Tagline: '{tagline}'")
             print(f"Attempt: {attempts}")
@@ -204,27 +204,21 @@ class TestBasicApproval:
             "attempts": 3,
             "max_attempts": 3
         }
-        
+
         # Simulate the check_completion function logic
-        approved = test_state.get("approved", False)
-        attempts = test_state.get("attempts", 0)
-        max_attempts = test_state.get("max_attempts", 3)
-        
-        if approved:
-            result = "complete"
-        elif attempts >= max_attempts:
-            result = "complete"
-        else:
-            result = "retry"
-        
+        approved = test_state.get('approved', False)
+        attempts = test_state.get('attempts', 0)
+        max_attempts = test_state.get('max_attempts', 3)
+
+        result = 'complete' if approved or attempts >= max_attempts else 'retry'
         assert result == "complete"
 
 # Run the tests
 if __name__ == "__main__":
     # Run unit tests
     print("Running unit tests for Example 1...")
-    pytest.main([__file__ + "::TestBasicApproval", "-v"])
-    
+    pytest.main([f'{__file__}::TestBasicApproval', '-v'])
+
     print("\n" + "="*50)
     print("Unit tests completed. Now running the interactive example...")
     print("="*50 + "\n")
