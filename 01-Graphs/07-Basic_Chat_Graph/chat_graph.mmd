@@ -1,17 +1,5 @@
 ---
 config:
-  theme: default
-  themeVariables:
-    primaryColor: '#ffffff'
-    primaryTextColor: '#333333'
-    primaryBorderColor: '#333333'
-    lineColor: darkgray
-    secondaryColor: '#ffffff'
-    tertiaryColor: '#ffffff'
-    background: '#ffffff'
-    mainBkg: '#ffffff'
-    secondBkg: '#ffffff'
-    tertiaryBkg: '#ffffff'
   flowchart:
     curve: linear
 ---
@@ -29,5 +17,5 @@ graph TD;
 	user_input -.-> ai_response;
 	user_input -. &nbsp;continue_input&nbsp; .-> user_input;
 	classDef default fill:#f2f0ff,line-height:1.2
-	classDef first fill:#d6cfff
+	classDef first fill-opacity:0
 	classDef last fill:#bfb6fc
