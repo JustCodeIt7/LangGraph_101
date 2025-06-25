@@ -179,7 +179,7 @@ archive/
 !/.env
 /.env
 *-dev.md
-# all files in examples/ 
+# all files in examples/
 examples/*
 .aider*
 
@@ -197,3 +197,5 @@ examples
 !.env.project
 !.env.vault!/.vscode/
 !/.aiignore
+context_portal/
+.junie/guidelines.md
