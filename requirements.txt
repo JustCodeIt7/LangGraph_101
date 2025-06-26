@@ -1,14 +1,14 @@
-langgraph~=0.4.7
-langchain_openai~=0.3.11
+langgraph
+langchain_openai
 
-yfinance~=0.2.61
-requests~=2.32.3
-litellm~=1.67.4.post1
-ipython~=9.2.0
-rich~=14.0.0
-python-dotenv~=1.0.1
-langchain-core~=0.3.59
-typing_extensions~=4.12.2
-langchain~=0.3.25
-pydantic~=2.11.4
-asyncio~=3.4.3
+yfinance
+requests
+litellm
+ipython
+rich
+python-dotenv
+langchain-core
+typing_extensions
+langchain
+pydantic
+asyncio

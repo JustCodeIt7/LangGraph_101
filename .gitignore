@@ -200,3 +200,5 @@ examples
 context_portal/
 .junie/guidelines.md
 GEMINI.md
+.junie/
+.continue/
