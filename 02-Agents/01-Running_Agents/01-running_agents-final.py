@@ -1,155 +1,84 @@
 # %%
+# Import necessary modules for building and running a LangGraph agent
 from langgraph.prebuilt import create_react_agent
 from langgraph.errors import GraphRecursionError
 from rich import print
 import asyncio
-import nest_asyncio
+import nest_asyncio  # Allows nested event loops in Jupyter environments
+
 
 # %%
 ####################################################################
 ########## Step 1: Create a Basic Agent ############################
 ####################################################################
-
-
-# For this tutorial, we'll simulate a simple weather tool function
-# In a real scenario, this would call an API or perform a real task
+# Define a mock tool function to simulate fetching weather data
+# In a real-world tutorial, replace this with an API call or real logic
 def get_weather(query):
     """
     A mock function to fetch weather information for a given location.
-    This is a placeholder for the tutorial and returns a static response.
+    Returns a static response for demonstration purposes.
+
     Args:
         query (str): The location to fetch weather for.
     Returns:
-        str: A string describing the weather in the queried location.
+        str: A description of the weather at the specified location.
     """
-    print(f'Tool called: Fetching weather for {query}')
+    print(f'[Tool] Fetching weather for {query}')  # Log invocation
     return f'The weather in {query} is sunny with a high of 72°F.'
 
+def greetings(query):
+    """
+    A mock function to handle greetings.
+    Returns how the llm should greet the user
+    Args:
+        query (str): The user's input.
 
-# Step 1: Create a basic agent with a model and tools
-# Replace 'model' with an actual model in a real application
-print('Creating a basic LangGraph agent...')
+    Returns:
+        str: A greeting response.
+    """
+    print(f'[Tool] Responding to greeting: {query}')
+    return f'responding to greeting: {query}'
+
+
+# Instantiate a LangGraph agent using the mock weather tool
+print('Creating a LangGraph agent with a weather tool...')
 agent = create_react_agent(
-    # model="openai:gpt-4.1-nano",  # Placeholder model
-    model='ollama:llama3.2',  # Placeholder model
-    tools=[get_weather],
+    model='ollama:llama3.2',  # Replace with your preferred model endpoint
+    tools=[get_weather, greetings],  # Supply the get_weather and greetings functions as tools
 )
 
 # %%
 ####################################################################
 ########## Step 2: Synchronous Invocation ##########################
 ####################################################################
-
-# Using .invoke() to get a full response in one go
 print('\n=== Synchronous Invocation ===')
-sync_input = {'messages': [{'role': 'user', 'content': "What's the weather in San Francisco?"}]}
+# Prepare input in the format expected by the agent (.invoke)
+# sync_input = {'messages': [{'role': 'user', 'content': "What's the weather in San Francisco?"}]}
+sync_input = {'messages': [{'role': 'user', 'content': 'hello how are you?'}]}
+# Invoke the agent synchronously and capture the full response
 sync_response = agent.invoke(sync_input)
 print('Synchronous Response:')
-print(sync_response)
-
-
-# %%
-
+print(sync_response)  # Display the agent's response
 
 # %%
 ####################################################################
 ########## Step 3: Input and Output Formats ########################
 ####################################################################
-
-# Demonstrating different input formats
-print('\n=== Input Formats ===')
-input_string = {'messages': 'Hello'}  # Converted to HumanMessage
-input_dict = {'messages': {'role': 'user', 'content': 'Hi there'}}
-input_list = {'messages': [{'role': 'user', 'content': 'Hey!'}]}
-input_custom = {'messages': [{'role': 'user', 'content': 'Hello'}], 'user_name': 'Alice'}
-print('Different input formats are supported:')
-print('- String input:', input_string)
-print('- Dictionary input:', input_dict)
-print('- List of messages:', input_list)
-print('- Custom state input:', input_custom)
-# Output format includes all messages exchanged during execution
-print("Output is a dictionary with 'messages' and optional custom state fields.")
-
-# %%
-####################################################################
-########## Step 4: Streaming Output ###############################
-####################################################################
-
-# Using .stream() for incremental updates
-# %%
-from langgraph.prebuilt import create_react_agent
-from langgraph.errors import GraphRecursionError
-from rich import print
-import asyncio
-import nest_asyncio
-
-# %%
-####################################################################
-########## Step 1: Create a Basic Agent ############################
-####################################################################
-
-
-# For this tutorial, we'll simulate a simple weather tool function
-# In a real scenario, this would call an API or perform a real task
-def get_weather(query):
-    """
-    A mock function to fetch weather information for a given location.
-    This is a placeholder for the tutorial and returns a static response.
-    Args:
-        query (str): The location to fetch weather for.
-    Returns:
-        str: A string describing the weather in the queried location.
-    """
-    print(f'Tool called: Fetching weather for {query}')
-    return f'The weather in {query} is sunny with a high of 72°F.'
-
-
-# Step 1: Create a basic agent with a model and tools
-# Replace 'model' with an actual model in a real application
-print('Creating a basic LangGraph agent...')
-agent = create_react_agent(
-    # model="openai:gpt-4.1-nano",  # Placeholder model
-    model='ollama:llama3.2',  # Placeholder model
-    tools=[get_weather],
-)
-
-# %%
-####################################################################
-########## Step 2: Synchronous Invocation ##########################
-####################################################################
-
-# Using .invoke() to get a full response in one go
-print('\n=== Synchronous Invocation ===')
-sync_input = {'messages': [{'role': 'user', 'content': "What's the weather in San Francisco?"}]}
-sync_response = agent.invoke(sync_input)
-print('Synchronous Response:')
-print(sync_response)
-
-
-# %%
-
-
-# %%
-####################################################################
-########## Step 3: Input and Output Formats ########################
-####################################################################
-
-# Demonstrating different input formats
-print('\n=== Input Formats ===')
 print('\n=== Input Formats and Agent Responses ===')
 # Define various input formats to test how the agent handles them
 input_variants = {
     'string': {'messages': 'Hello, how are you?'},
     'dict': {'messages': {'role': 'user', 'content': 'Hi there'}},
-    'list': {'messages': [{'role': 'user', 'content': 'Hey!'}]},
-    'custom': {'messages': [{'role': 'user', 'content': "What's the weather in SF?"}], 'user_name': 'Alice'},
+    'list': {
+        'messages': [{'role': 'user', 'content': 'Hey!'}, {'role': 'user', 'content': 'What is the weather in SF?'}]
+    },
 }
 
 # Loop through each format, invoke the agent, and print the response
 type_responses = {}
 for fmt_name, fmt_input in input_variants.items():
-    print(f'\n-- Testing input format: {fmt_name} --')
-
+    print('#' * (70))
+    print(f'-- Testing input format: {fmt_name} --')
     response = agent.invoke(fmt_input)
     print('Agent Response:', response)
     type_responses[fmt_name] = response
@@ -159,142 +88,68 @@ for fmt_name, fmt_input in input_variants.items():
 ####################################################################
 ########## Step 4: Streaming Output ###############################
 ####################################################################
-
-# Using .stream() for incremental updates
-# update: emits an event after every agent step
-print('\n=== Streaming Output (Synchronous) ===')
+print('\n=== Streaming Output Example ===')
 stream_input = {'messages': [{'role': 'user', 'content': "What's the weather in SF?"}]}
 
+# 1) Stream updates: emit after each agent step
 for chunk in agent.stream(stream_input, stream_mode='updates'):
-    print('Stream chunk:', chunk)
-
-
+    print('[Update]', chunk)
 # %%
-# messages: stream tokens as they are produced by the LLM
-stream_input = {'messages': [{'role': 'user', 'content': "What's the weather in SF?"}]}
+# 2) Stream tokens: outputs tokens as the LLM generates them
 for token, metadata in agent.stream(stream_input, stream_mode='messages'):
     print(token.content, end='')
-
 # %%
-# custom: stream updates from tools as they are executed
-stream_input = {'messages': [{'role': 'user', 'content': "What's the weather in SF?"}]}
-for token, metadata in agent.stream(
-    {'messages': [{'role': 'user', 'content': 'what is the weather in sf'}]}, stream_mode='custom'
-):
-    print(token.content, end='')
-    # print('Metadata', metadata)
+# 3) Stream custom: includes tool outputs and metadata
+for token, metadata in agent.stream(stream_input, stream_mode='custom'):
+    print(token, end='')
+    print(f' [Metadata: {metadata}]')  # Print metadata for each token
 
-
-# %%
 # %%
 ####################################################################
 ########## Step 5: Asynchronous Invocation #########################
 ####################################################################
-
-# Using await .ainvoke() for async execution (simulated here with a comment)
 print('\n=== Asynchronous Invocation ===')
+
+# Apply nest_asyncio to allow asyncio.run inside notebooks
+nest_asyncio.apply()
+stream_input = {'messages': [{'role': 'user', 'content': "What's the weather in SF?"}]}
 
 
 async def async_example():
-    # streaming modes updates , messages, custom
-    async for chunk in agent.astream(
-        {'messages': [{'role': 'user', 'content': 'what is the weather in sf'}]}, stream_mode='custom'
-    ):
-        print('chunk', chunk)
-        print('\n')
-    # In a real async environment, you would use:
-    response = await agent.ainvoke({'messages': [{'role': 'user', 'content': "What's the weather in SF?"}]})
-    return response
+    """
+    Demonstrates asynchronous streaming and full invocation:
+    - .astream yields chunks in real time
+    - .ainvoke returns the final response
+    """
+    # Async stream demonstration
+    async for chunk in agent.astream(stream_input, stream_mode='custom'):
+        print('[Async Chunk]', chunk)
+    # Await full response from the agent
+    full_response = await agent.ainvoke({'messages': [{'role': 'user', 'content': "What's the weather in SF?"}]})
+    print('Async Response:', full_response)
 
 
-nest_asyncio.apply()
-
+# Execute the async example
 asyncio.run(async_example())
 
 # %%
 ####################################################################
 ########## Step 6: Max Iterations to Prevent Infinite Loops ########
 ####################################################################
-
-# Setting a recursion limit to control execution
-print('\n=== Max Iterations with Recursion Limit ===')
-max_iterations = 3
-recursion_limit = 2 * max_iterations + 1
+# stream_input = {'messages': [{'role': 'user', 'content': "What's the weather in SF?"}]}
+stream_input = {'messages': [{'role': 'user', 'content': 'hello how are you?'}]}
+print('\n=== Recursion Limit Configuration ===')
+# Define maximum agent steps to avoid runaway loops
+# max_iterations = 5
+recursion_limit = 1
+# recursion_limit = 5
+# Create a new agent instance with the specified recursion limit
 agent_with_limit = agent.with_config(recursion_limit=recursion_limit)
+
 try:
-    limit_response = agent_with_limit.invoke({'messages': [{'role': 'user', 'content': "What's the weather in SF?"}]})
-    print('Response with recursion limit:', limit_response)
+    limit_response = agent_with_limit.invoke(stream_input)
+    print('Response within recursion limit:', limit_response)
 except GraphRecursionError:
-    print('Agent stopped due to max iterations.')
-
-
-# %%
-print('\n=== Streaming Output (Synchronous) ===')
-stream_input = {'messages': [{'role': 'user', 'content': "What's the weather in SF?"}]}
-
-for chunk in agent.stream(stream_input, stream_mode='updates'):
-    print('Stream chunk:', chunk)
-
-
-# %%
-
-stream_input = {'messages': [{'role': 'user', 'content': "What's the weather in SF?"}]}
-for token, metadata in agent.stream(stream_input, stream_mode='messages'):
-    print(token.content, end='')
-
-# %%
-stream_input = {'messages': [{'role': 'user', 'content': "What's the weather in SF?"}]}
-for token, metadata in agent.stream(
-    {'messages': [{'role': 'user', 'content': 'what is the weather in sf'}]}, stream_mode='custom'
-):
-    print(token.content, end='')
-    # print('Metadata', metadata)
-
-
-# %%
-# %%
-####################################################################
-########## Step 5: Asynchronous Invocation #########################
-####################################################################
-
-# Using await .ainvoke() for async execution (simulated here with a comment)
-print('\n=== Asynchronous Invocation ===')
-
-
-async def async_example():
-    # streaming modes updates , messages, custom
-    # update: emits an event after every agent step
-    # messages: stream tokens as they are produced by the LLM
-    # custom: stream updates from tools as they are executed
-    async for chunk in agent.astream(
-        {'messages': [{'role': 'user', 'content': 'what is the weather in sf'}]}, stream_mode='custom'
-    ):
-        print('chunk', chunk)
-        print('\n')
-    # In a real async environment, you would use:
-    response = await agent.ainvoke({'messages': [{'role': 'user', 'content': "What's the weather in SF?"}]})
-    return response
-
-
-nest_asyncio.apply()
-
-asyncio.run(async_example())
-
-# %%
-####################################################################
-########## Step 6: Max Iterations to Prevent Infinite Loops ########
-####################################################################
-
-# Setting a recursion limit to control execution
-print('\n=== Max Iterations with Recursion Limit ===')
-max_iterations = 3
-recursion_limit = 2 * max_iterations + 1
-agent_with_limit = agent.with_config(recursion_limit=recursion_limit)
-try:
-    limit_response = agent_with_limit.invoke({'messages': [{'role': 'user', 'content': "What's the weather in SF?"}]})
-    print('Response with recursion limit:', limit_response)
-except GraphRecursionError:
-    print('Agent stopped due to max iterations.')
-
+    print('Error: Agent stopped to prevent infinite recursion')
 
 # %%
