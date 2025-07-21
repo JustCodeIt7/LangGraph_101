@@ -162,9 +162,11 @@ async def demonstrate_async_multiple_modes():
             token, metadata = chunk
             if token:
                 node_name = metadata.get("node_name", "unknown") if metadata else "unknown"
+                # Convert token to string - handle both string tokens and AIMessageChunk objects
+                token_content = str(token.content) if hasattr(token, 'content') else str(token)
                 console.print(Panel(
                     Text(f"Async LLM Token from {node_name}", style="bold white"),
-                    subtitle=token,
+                    subtitle=token_content,
                     border_style="blue"
                 ))
 
@@ -190,9 +192,9 @@ async def main():
     # Uncomment the one you want to run
     
     await demonstrate_async_agent_progress()
-    # await demonstrate_async_llm_tokens()
-    # await demonstrate_async_custom_updates()
-    # await demonstrate_async_multiple_modes()
+    await demonstrate_async_llm_tokens()
+    await demonstrate_async_custom_updates()
+    await demonstrate_async_multiple_modes()
 
 if __name__ == "__main__":
     # Run the async main function
