@@ -9,6 +9,7 @@ from langgraph.checkpoint.sqlite import SqliteSaver
 from langgraph.graph import StateGraph, START, END
 from langgraph.graph.message import add_messages
 import base64
+
 # %%
 # Clean up any previous database
 if os.path.exists('simple_chat.sqlite'):
@@ -19,13 +20,16 @@ if os.path.exists('simple_chat.sqlite'):
 class State(TypedDict):
     messages: Annotated[List[BaseMessage], add_messages]
 
+
 # %%
 # Create the chatbot node
 # llm = ChatOpenAI(model='gpt-4o-mini', temperature=0)
 llm = ChatOllama(model='llama3.2', temperature=0)
-# %%
+
+
 def chatbot(state: State):
     return {'messages': [llm.invoke(state['messages'])]}
+
 
 # %%
 # Build and run the graph with persistence

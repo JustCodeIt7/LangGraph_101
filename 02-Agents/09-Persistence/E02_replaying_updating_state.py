@@ -24,7 +24,9 @@ print('\n=== Example 2: Replaying and Updating State ===')
 
 checkpointer1 = InMemorySaver()
 # %%
-workflow1 = StateGraph(TypedDict('SimpleState', {'counter': Annotated[int, add], 'messages': Annotated[List[str], add]}))
+workflow1 = StateGraph(
+    TypedDict('SimpleState', {'counter': Annotated[int, add], 'messages': Annotated[List[str], add]})
+)
 workflow1.add_node('increment', lambda state: {'counter': 1, 'messages': ['Incremented counter']})
 workflow1.add_node('double', lambda state: {'counter': state['counter'] * 2, 'messages': ['Doubled counter']})
 workflow1.add_edge(START, 'increment')
@@ -41,7 +43,9 @@ with open('g02_diagram.png', 'wb') as f:
 print('Saved graph2 diagram to graph2_diagram.png')
 
 # %%
-graph1.invoke({'counter': 0, 'messages': []}, {'configurable': {'thread_id': 'example1'}})  # Re-run to populate if needed
+graph1.invoke(
+    {'counter': 0, 'messages': []}, {'configurable': {'thread_id': 'example1'}}
+)  # Re-run to populate if needed
 # Fetch history again and pick the checkpoint after 'increment' (second most recent)
 # %%
 history = list(graph1.get_state_history({'configurable': {'thread_id': 'example1'}}))

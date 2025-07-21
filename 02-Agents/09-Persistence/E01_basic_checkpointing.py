@@ -8,6 +8,7 @@ from langgraph.store.memory import InMemoryStore
 from langchain_core.runnables import RunnableConfig
 from langgraph.store.base import BaseStore
 from rich import print
+
 # from langchain.vectorstores.chroma import ChromaStore
 # %%
 # --- Example 1: Easiest - Basic Checkpointing with InMemorySaver ---
@@ -21,6 +22,7 @@ class SimpleState(TypedDict):
     counter: Annotated[int, add]  # Reducer to accumulate values
     messages: Annotated[List[str], add]
 
+
 # %%
 # Define nodes
 def increment_counter(state: SimpleState):
@@ -29,6 +31,7 @@ def increment_counter(state: SimpleState):
 
 def double_counter(state: SimpleState):
     return {'counter': state['counter'] * 2, 'messages': ['Doubled counter']}
+
 
 # %%
 # Build the graph
