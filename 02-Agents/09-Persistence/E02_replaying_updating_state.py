@@ -36,7 +36,7 @@ graph1 = workflow1.compile(checkpointer=checkpointer1)
 
 # Generate and save diagram for graph1
 diagram1 = graph1.get_graph().draw_mermaid_png()
-with open('graph2_diagram.png', 'wb') as f:
+with open('g02_diagram.png', 'wb') as f:
     f.write(diagram1)
 print('Saved graph2 diagram to graph2_diagram.png')
 

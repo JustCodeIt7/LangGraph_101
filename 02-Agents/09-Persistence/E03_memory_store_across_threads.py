@@ -3,6 +3,7 @@ import os
 from typing import Annotated, TypedDict, List
 
 from langchain_openai import ChatOpenAI
+from langchain_ollama import ChatOllama
 from langchain_core.messages import BaseMessage, HumanMessage
 from langgraph.checkpoint.sqlite import SqliteSaver
 from langgraph.graph import StateGraph, START, END
@@ -20,8 +21,8 @@ class State(TypedDict):
 
 # %%
 # Create the chatbot node
-llm = ChatOpenAI(model='gpt-4o-mini', temperature=0)
-
+# llm = ChatOpenAI(model='gpt-4o-mini', temperature=0)
+llm = ChatOllama(model='llama3.2', temperature=0)
 # %%
 def chatbot(state: State):
     return {'messages': [llm.invoke(state['messages'])]}
@@ -40,9 +41,9 @@ with SqliteSaver.from_conn_string('simple_chat.sqlite') as memory:
 
     # Generate and save diagram for graph
     diagram = graph.get_graph().draw_mermaid_png()
-    with open('graph3_diagram.png', 'wb') as f:
+    with open('g03_diagram.png', 'wb') as f:
         f.write(diagram)
-    print('Saved graph3 diagram to graph3_diagram.png')
+    print('Saved g03 diagram to g03_diagram.png')
 
     # Configuration for this conversation thread
     config = {'configurable': {'thread_id': 'conversation-1'}}

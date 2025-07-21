@@ -46,10 +46,10 @@ graph1 = workflow1.compile(checkpointer=checkpointer1)
 # %%
 # Generate and save diagram for graph1
 diagram1 = graph1.get_graph().draw_mermaid_png()
-with open('graph1_diagram.png', 'wb') as f:
+with open('g01_diagram.png', 'wb') as f:
     f.write(diagram1)
 # %%
-print('Saved graph1 diagram to graph1_diagram.png')
+print('Saved g01 diagram to g01_diagram.png')
 # Invoke with a thread_id
 config1 = {'configurable': {'thread_id': 'example1'}}
 input_state = {'counter': 0, 'messages': []}
