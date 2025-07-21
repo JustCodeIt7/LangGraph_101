@@ -96,3 +96,4 @@ def demonstrate_llm_tokens_streaming():
 if __name__ == "__main__":
     console.print(Panel.fit("LangGraph Streaming Tutorial - Example 2: LLM Tokens", title="LangGraph Tutorial", border_style="red"))
     demonstrate_llm_tokens_streaming()
+# %%

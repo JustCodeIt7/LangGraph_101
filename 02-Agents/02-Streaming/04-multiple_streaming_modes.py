@@ -81,23 +81,18 @@ def demonstrate_multiple_streaming_modes():
     user_message = "What's the weather in San Francisco and New York?"
     console.print(f"[bold]User:[/bold] {user_message}\n")
     console.print("[bold]Multiple streaming modes:[/bold]")
-    
+
     # Create input for the agent
-    stream_input = {"messages": [{"role": "user", "content": user_message}]}
-    
+    stream_input = {'messages': [{'role': 'user', 'content': user_message}]}
+
     # Stream with multiple modes
     for stream_mode, chunk in agent.stream(
         stream_input, 
         stream_mode=["updates", "messages", "custom"]
     ):
         # Format based on the type of stream
-        if stream_mode == "updates":
-            console.print(Panel(
-                Text(f"Agent Update", style="bold white"),
-                subtitle=str(chunk)[:100] + "...",
-                border_style="green"
-            ))
-        
+        if stream_mode == 'custom':
+            console.print(Panel(Text('Tool Update', style='bold white'), subtitle=str(chunk), border_style='magenta'))
         elif stream_mode == "messages":
             token, metadata = chunk
             if token:
@@ -107,13 +102,15 @@ def demonstrate_multiple_streaming_modes():
                     subtitle=token,
                     border_style="blue"
                 ))
-        
-        elif stream_mode == "custom":
-            console.print(Panel(
-                Text("Tool Update", style="bold white"),
-                subtitle=str(chunk),
-                border_style="magenta"
-            ))
+
+        elif stream_mode == 'updates':
+            console.print(
+                Panel(
+                    Text('Agent Update', style='bold white'),
+                    subtitle=f'{str(chunk)[:100]}...',
+                    border_style='green',
+                )
+            )
 
 #%%
 ####################################################################

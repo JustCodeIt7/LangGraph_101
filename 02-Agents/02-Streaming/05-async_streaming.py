@@ -144,23 +144,20 @@ async def demonstrate_async_multiple_modes():
     user_message = "What's the weather in San Francisco?"
     console.print(f"[bold]User:[/bold] {user_message}\n")
     console.print("[bold]Async multiple modes (streaming):[/bold]")
-    
+
     # Create input for the agent
-    stream_input = {"messages": [{"role": "user", "content": user_message}]}
-    
+    stream_input = {'messages': [{'role': 'user', 'content': user_message}]}
+
     # Stream with multiple modes asynchronously
     async for stream_mode, chunk in agent.astream(
         stream_input, 
         stream_mode=["updates", "messages", "custom"]
     ):
         # Format based on the type of stream
-        if stream_mode == "updates":
-            console.print(Panel(
-                Text(f"Async Agent Update", style="bold white"),
-                subtitle=str(chunk)[:100] + "...",
-                border_style="green"
-            ))
-        
+        if stream_mode == 'custom':
+            console.print(
+                Panel(Text('Async Tool Update', style='bold white'), subtitle=str(chunk), border_style='magenta')
+            )
         elif stream_mode == "messages":
             token, metadata = chunk
             if token:
@@ -170,13 +167,15 @@ async def demonstrate_async_multiple_modes():
                     subtitle=token,
                     border_style="blue"
                 ))
-        
-        elif stream_mode == "custom":
-            console.print(Panel(
-                Text("Async Tool Update", style="bold white"),
-                subtitle=str(chunk),
-                border_style="magenta"
-            ))
+
+        elif stream_mode == 'updates':
+            console.print(
+                Panel(
+                    Text('Async Agent Update', style='bold white'),
+                    subtitle=f'{str(chunk)[:100]}...',
+                    border_style='green',
+                )
+            )
 
 #%%
 ####################################################################
