@@ -1,0 +1,21 @@
+# Core dependencies
+langgraph>=0.0.19
+langchain-core>=0.1.0
+langchain-litellm>=0.0.1
+pydantic>=2.0.0
+
+# For web scraping
+requests>=2.31.0
+beautifulsoup4>=4.12.0
+
+# For scholarly paper search and extraction
+# Uncomment and add specific packages when implementing actual scholarly APIs
+# scholarly>=1.7.0  # For Google Scholar
+# semanticscholar>=0.4.0  # For Semantic Scholar API
+# pymed>=0.8.9  # For PubMed
+
+# For NLP processing
+# Uncomment when implementing actual NLP techniques
+# spacy>=3.6.0
+# nltk>=3.8.1
+# transformers>=4.30.0
