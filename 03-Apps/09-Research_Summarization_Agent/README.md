@@ -88,7 +88,6 @@ FUNCTION EXTRACT_KEY_FINDINGS(content_list, research_topic)
     entities = EXTRACT_NAMED_ENTITIES(content_item.text)
     relevant_sentences = FILTER_SENTENCES_BY_TOPIC(content_item.text, research_topic)
     summarized_points = SUMMARIZE_TEXT_CHUNKS(relevant_sentences)
-    // Associate findings with their source for citation
     ADD_TO_LIST(findings, CREATE_FINDING_OBJECT(summarized_points, content_item.source_url, content_item.author, content_item.date))
   ENDFOR
   RETURN findings

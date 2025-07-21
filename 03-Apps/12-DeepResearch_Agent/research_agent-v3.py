@@ -21,7 +21,7 @@ logging.basicConfig(level=logging.INFO)
 
 # LLM Setup (using OpenAI; replace with other providers if needed)
 # llm = ChatOpenAI(model="gpt-4o", api_key=os.getenv("OPENAI_API_KEY"))
-llm = ChatOllama(model="llama3.2", base_url='100.95.122.242:11434')
+llm = ChatOllama(model="gemma3:12b", base_url='100.95.122.242:11434')
 
 # Brave Search Setup using LangChain
 brave_tool = BraveSearch.from_api_key(
