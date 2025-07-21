@@ -16,7 +16,7 @@ import logging
 import re  # For simple parsing in KG
 from langchain_ollama import ChatOllama
 import operator  # For state annotations
-
+from rich import print
 # Set up logging
 logging.basicConfig(level=logging.INFO)
 
@@ -43,7 +43,7 @@ class ResearchState(BaseModel):
     gaps: Annotated[List[str], operator.add] = []       # For gaps accumulation
     report: str = ""
     iterations: int = 0
-    max_iterations: int = 5
+    max_iterations: int = 3
     report_length: int = 1000
     acceptable_sources: List[str] = [".org", ".edu", ".gov"]
     usage_counter: int = 0  # Track API calls for cost management
@@ -232,10 +232,10 @@ if __name__ == "__main__":
         topic="Impact of AI on climate change",
         report_length=800,
         acceptable_sources=[".edu", ".gov", ".org"],
-        max_iterations=3
+        max_iterations=1
     )
     output = graph.invoke(initial_state)
     print("\nGenerated Report:\n")
-    print(output.report)
+    print(output)
     # Optionally, print knowledge graph nodes
     print("\nKnowledge Graph Nodes:", list(output.knowledge_graph.nodes))
