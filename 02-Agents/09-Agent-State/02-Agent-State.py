@@ -6,7 +6,8 @@ from langgraph.graph import StateGraph, END
 from langgraph.graph.message import add_messages
 from typing import TypedDict, Annotated, List
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
-
+from langchain_ollama import ChatOllama
+from rich import print
 # --- Environment Setup (Optional: Load from .env or similar in real projects) ---
 # Ensure you have OPENAI_API_KEY set in your environment
 # from dotenv import load_dotenv
@@ -77,9 +78,10 @@ def call_llm_node(state: EnhancedAgentState):
     # For this example, we'll keep the prompt simple.
     # system_prompt = f"You are a helpful AI. It is turn number {turn_count} with {user_name}."
     # current_messages = [SystemMessage(content=system_prompt)] + messages
-    
-    llm = ChatOpenAI(model="gpt-3.5-turbo", temperature=0.7)
-    
+
+    # llm = ChatOpenAI(model="gpt-3.5-turbo", temperature=0.7)
+    llm = ChatOllama(model='llama3.2', temperature=0.7)  # Use Ollama model
+
     # Create a prompt template (optional, but good practice)
     # For this example, we'll just pass the messages directly
     # prompt = ChatPromptTemplate.from_messages(messages)
