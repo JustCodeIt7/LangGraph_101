@@ -4,7 +4,7 @@ from langchain_core.messages import BaseMessage, HumanMessage, AIMessage
 from langgraph.graph import StateGraph, END
 from rich import print
 from langchain_community.llms import Ollama
-from langgraph.memory import InMemorySaver
+from langgraph.checkpoint.memory import InMemorySaver
 
 # --- Example 1: Basic Message State ---
 # This state just tracks messages. The graph has two nodes: one to "think" and one to "respond".
@@ -42,6 +42,14 @@ basic_workflow.checkpointer = InMemorySaver()
 
 # Compile and run example
 basic_graph = basic_workflow.compile()
+
+# display the graph
+diagram = basic_graph.get_graph().draw_mermaid_png()
+print(basic_graph.get_graph().draw_ascii())
+with open('g01_diagram.png', 'wb') as f:
+    f.write(diagram)
+
+
 initial_state = {'messages': [HumanMessage(content='Hello!')]}
 print('Example 1 Output - Basic Message State:')
 print(basic_graph.invoke(initial_state))

@@ -4,12 +4,11 @@ from langchain_core.messages import BaseMessage, HumanMessage, AIMessage
 from langgraph.graph import StateGraph, END
 from rich import print
 from typing import TypedDict, Annotated, Sequence
-from langchain_community.llms import Ollama
-from langgraph.memory import InMemorySaver
+from langgraph.checkpoint.memory import InMemorySaver
+from langchain_ollama import ChatOllama, OllamaEmbeddings
 
 # --- Example 2: State with Task Tracking ---
 # Adds task_id, retries, and is_complete. Graph includes a retry mechanism.
-
 
 class TaskAgentState(TypedDict):
     messages: Annotated[Sequence[BaseMessage], operator.add]
@@ -19,22 +18,20 @@ class TaskAgentState(TypedDict):
 
 
 def init_task_node(state: TaskAgentState) -> TaskAgentState:
-    llm = Ollama(model="llama3.2")
-    return {
-        'task_id': 'task_123',
-        'retries': 0,
-        'is_complete': False,
-        'messages': [AIMessage(content=llm('Task initialized.'))],
-    }
+    llm = ChatOllama(model='llama3.2')
+    return {'task_id': 'task_123', 'retries': 0, 'is_complete': False, 'messages': [llm.invoke('Task initialized.')]}
 
 
 def process_node(state: TaskAgentState) -> TaskAgentState:
-    llm = Ollama(model="llama3.2")
+    llm = ChatOllama(model='llama3.2', base_url='http://localhost:11434', temperature=0.1)
     if state['retries'] < 2:
         # Simulate failure and retry
-        return {'retries': 1, 'messages': [AIMessage(content=llm(f'Processing... Retry {state["retries"] + 1}'))]}
+        return {
+            'retries': state['retries'] + 1,
+            'messages': [llm.invoke(f'Processing... Retry {state["retries"] + 1}')],
+        }
     else:
-        return {'is_complete': True, 'messages': [AIMessage(content=llm('Task completed!'))]}
+        return {'is_complete': True, 'messages': [llm.invoke('Task completed!')]}
 
 
 def check_complete(state: TaskAgentState) -> str:
@@ -54,6 +51,12 @@ task_workflow.checkpointer = InMemorySaver()
 
 # Compile and run example
 task_graph = task_workflow.compile()
+
+# display the graph
+diagram = task_graph.get_graph().draw_mermaid_png()
+with open('g02_diagram.png', 'wb') as f:
+    f.write(diagram)
+
 initial_state = {'messages': [HumanMessage(content='Start task')]}
 print('\nExample 2 Output - Task Status:')
 print(task_graph.invoke(initial_state))
