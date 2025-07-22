@@ -32,15 +32,26 @@ def summarize_node(state: ComplexAgentState) -> ComplexAgentState:
 
 
 # Build the graph
-complex_workflow = StateGraph(state_schema=ComplexAgentState)
-complex_workflow.add_node('subtask', subtask_node)
-complex_workflow.add_node('summarize', summarize_node)
-complex_workflow.add_edge('subtask', 'summarize')
-complex_workflow.add_edge('summarize', END)
-complex_workflow.set_entry_point('subtask')
+graph = StateGraph(state_schema=ComplexAgentState)
+graph.add_node('subtask', subtask_node)
+graph.add_node('summarize', summarize_node)
+graph.add_edge('subtask', 'summarize')
+graph.add_edge('summarize', END)
+graph.set_entry_point('subtask')
+
 
 # Compile and run example
-complex_graph = complex_workflow.compile()
+complex_graph = graph.compile()
+
+# display the graph
+
+diagram = complex_graph.get_graph().draw_mermaid_png()
+print(complex_graph.get_graph().draw_ascii())
+with open('g03_diagram.png', 'wb') as f:
+    f.write(diagram)
+print('Saved g03_diagram.png')
+
+print('Example 3: Complex State with Nested Data')
 initial_state = {'messages': [HumanMessage(content='Run complex task')]}
 print('\nExample 3 Output - Complex State with Nested Data:')
 print(complex_graph.invoke(initial_state))

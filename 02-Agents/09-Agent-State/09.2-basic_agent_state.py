@@ -3,6 +3,8 @@ import operator
 from langchain_core.messages import BaseMessage, HumanMessage, AIMessage
 from langgraph.graph import StateGraph, END
 from rich import print
+from langchain_community.llms import Ollama
+from langgraph.memory import InMemorySaver
 
 # --- Example 1: Basic Message State ---
 # This state just tracks messages. The graph has two nodes: one to "think" and one to "respond".
@@ -14,14 +16,16 @@ class BasicAgentState(TypedDict):
 
 def think_node(state: BasicAgentState) -> BasicAgentState:
     # Simulate thinking by adding an AI message
-    new_message = AIMessage(content="I'm thinking about your query...")
+    llm = Ollama(model="llama3.2")
+    new_message = AIMessage(content=llm("I'm thinking about your query..."))
     return {'messages': [new_message]}
 
 
 def respond_node(state: BasicAgentState) -> BasicAgentState:
     # Respond based on the last message
+    llm = Ollama(model="llama3.2")
     last_message = state['messages'][-1].content if state['messages'] else ''
-    response = AIMessage(content=f'Response to: {last_message}')
+    response = AIMessage(content=llm(f'Response to: {last_message}'))
     return {'messages': [response]}
 
 
@@ -32,6 +36,9 @@ basic_workflow.add_node('respond', respond_node)
 basic_workflow.add_edge('think', 'respond')
 basic_workflow.add_edge('respond', END)
 basic_workflow.set_entry_point('think')
+
+# Add memory
+basic_workflow.checkpointer = InMemorySaver()
 
 # Compile and run example
 basic_graph = basic_workflow.compile()
