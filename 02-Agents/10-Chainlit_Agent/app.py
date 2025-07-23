@@ -66,7 +66,12 @@ tool_node = ToolNode(tools=[get_stock_price, get_top_news])
 def should_route(state: MessagesState) -> Literal['tools', 'final']:
     """Decide whether to invoke tools or finish the conversation."""
     last = state['messages'][-1]
-    return 'tools' if last.tool_calls else 'final'
+    # Limit the number of tool calls to prevent infinite loops
+    tool_call_count = sum(1 for msg in state['messages'] if hasattr(msg, 'tool_calls') and msg.tool_calls)
+
+    if last.tool_calls and tool_call_count < 5:  # Max 5 tool calls
+        return 'tools'
+    return 'final'
 
 
 def call_base_llm(state: MessagesState) -> Dict[str, List[BaseMessage]]:
@@ -99,8 +104,9 @@ def build_state_graph() -> StateGraph:
     builder.add_conditional_edges('agent', should_route)
     builder.add_edge('tools', 'agent')
     builder.add_edge('final', END)
-    g = builder.compile()
-    print(g.get_graph().draw_ascii())  # print graph structure for debugging
+
+    # Compile with recursion limit
+    g = builder.compile(checkpointer=None)
     return g
 
 
@@ -116,15 +122,13 @@ print(agent_graph.get_graph().draw_ascii())
 async def on_message(msg: cl.Message):
     """Handle incoming messages and stream the final response."""
     thread_id = cl.context.session.id
-    config = {'configurable': {'thread_id': thread_id}}
-
     history = [HumanMessage(content=msg.content)]
     reply = cl.Message(content='')
 
     try:
         async for chunk in agent_graph.astream(
             {'messages': history},
-            config=config,
+            config={'configurable': {'thread_id': thread_id}, 'recursion_limit': 50},
         ):
             if 'final' in chunk and chunk['final'].get('messages'):
                 final_message = chunk['final']['messages'][-1]
