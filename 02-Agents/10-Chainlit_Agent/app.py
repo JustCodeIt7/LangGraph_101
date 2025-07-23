@@ -8,12 +8,19 @@ from langchain.schema.runnable.config import RunnableConfig
 from langgraph.prebuilt import ToolNode
 from langgraph.graph import StateGraph, START, END
 from langgraph.graph.message import MessagesState
-
+from dotenv import load_dotenv
+import os
 from pygooglenews import GoogleNews
 import yfinance
 
+load_dotenv()
+OLLAMA_BASE_URL = os.getenv('OLLAMA_BASE_URL')
+
 MODEL_NAME = 'qwen3:4b'
 FINETUNE_MODEL_NAME = 'qwen3:4b'
+# get env OLLAMA_BASE_URL from environment variables or config
+
+
 # ----------------------------------
 # Tool Definition
 # ----------------------------------
@@ -39,7 +46,7 @@ def get_top_news(topic: str) -> str:
 # ----------------------------------
 def create_llm(model_name: str, temperature: float = 0.0, tags: List[str] = None) -> ChatOllama:
     """Initialize and configure a ChatOllama instance."""
-    llm = ChatOllama(model=model_name, temperature=temperature)
+    llm = ChatOllama(model=model_name, base_url=OLLAMA_BASE_URL, temperature=temperature)
     if tags:
         llm = llm.with_config(tags=tags)
     return llm.bind_tools([get_stock_price, get_top_news])
@@ -48,7 +55,7 @@ def create_llm(model_name: str, temperature: float = 0.0, tags: List[str] = None
 # Instantiate base and final LLMs
 base_llm = create_llm(MODEL_NAME, temperature=0.1)
 # Create final LLM without tool binding to avoid callback issues
-final_llm = ChatOllama(model=FINETUNE_MODEL_NAME, temperature=0.1)
+final_llm = ChatOllama(model=FINETUNE_MODEL_NAME, base_url=OLLAMA_BASE_URL, temperature=0.1)
 
 tool_node = ToolNode(tools=[get_stock_price, get_top_news])
 
@@ -92,10 +99,14 @@ def build_state_graph() -> StateGraph:
     builder.add_conditional_edges('agent', should_route)
     builder.add_edge('tools', 'agent')
     builder.add_edge('final', END)
-    return builder.compile()
+    g = builder.compile()
+    print(g.get_graph().draw_ascii())  # print graph structure for debugging
+    return g
 
 
 agent_graph = build_state_graph()
+# print graph structure for debugging
+print(agent_graph.get_graph().draw_ascii())
 
 
 # ----------------------------------
