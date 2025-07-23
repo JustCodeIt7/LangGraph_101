@@ -1,6 +1,7 @@
 from typing import Literal, List, Dict
 import chainlit as cl
 from langchain_openai import ChatOpenAI
+from langchain_ollama import ChatOllama
 from langchain_core.tools import tool
 from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
 from langchain.schema.runnable.config import RunnableConfig
@@ -8,39 +9,48 @@ from langgraph.prebuilt import ToolNode
 from langgraph.graph import StateGraph, START, END
 from langgraph.graph.message import MessagesState
 
+from pygooglenews import GoogleNews
+import yfinance
 
+MODEL_NAME = 'qwen3:4b'
+FINETUNE_MODEL_NAME = 'qwen3:4b'
 # ----------------------------------
 # Tool Definition
 # ----------------------------------
 @tool
-def get_weather(city: Literal['nyc', 'sf']) -> str:
-    """Fetch basic weather info for supported cities."""
-    weather_map = {
-        'nyc': 'It might be cloudy in NYC',
-        'sf': "It's always sunny in SF",
-    }
-    try:
-        return weather_map[city]
-    except KeyError:
-        raise ValueError(f'Unknown city: {city}')
+def get_stock_price(symbol: str) -> str:
+    """Fetch the current stock price for a given symbol."""
+    # Placeholder implementation; replace with actual stock fetching logic
+    stock = yfinance.Ticker(symbol)
+    price = stock.history(period='1d')['Close'].iloc[-1]
+    return f'The current price of {symbol} is ${price:.2f}'
+
+
+@tool
+def get_top_news(topic: str) -> str:
+    """Fetch news headlines for a specific topic."""
+    gn = GoogleNews()
+    headlines = gn.get_top_headlines(q=topic)
+    return '\n'.join([f'{article.title}: {article.link}' for article in headlines.articles])
 
 
 # ----------------------------------
 # LLM Setup
 # ----------------------------------
-def create_llm(model_name: str, temperature: float = 0.0, tags: List[str] = None) -> ChatOpenAI:
-    """Initialize and configure a ChatOpenAI instance."""
-    llm = ChatOpenAI(model_name=model_name, temperature=temperature)
+def create_llm(model_name: str, temperature: float = 0.0, tags: List[str] = None) -> ChatOllama:
+    """Initialize and configure a ChatOllama instance."""
+    llm = ChatOllama(model=model_name, temperature=temperature)
     if tags:
         llm = llm.with_config(tags=tags)
-    return llm.bind_tools([get_weather])
+    return llm.bind_tools([get_stock_price, get_top_news])
 
 
 # Instantiate base and final LLMs
-base_llm = create_llm('gpt-3.5-turbo')
-final_llm = create_llm('gpt-3.5-turbo', tags=['final_node'])
+base_llm = create_llm(MODEL_NAME, temperature=0.1)
+# Create final LLM without tool binding to avoid callback issues
+final_llm = ChatOllama(model=FINETUNE_MODEL_NAME, temperature=0.1)
 
-tool_node = ToolNode(tools=[get_weather])
+tool_node = ToolNode(tools=[get_stock_price, get_top_news])
 
 
 # ----------------------------------
@@ -95,18 +105,21 @@ agent_graph = build_state_graph()
 async def on_message(msg: cl.Message):
     """Handle incoming messages and stream the final response."""
     thread_id = cl.context.session.id
-    callbacks = [cl.LangchainCallbackHandler()]
-    config = RunnableConfig(callbacks=callbacks, configurable={'thread_id': thread_id})
+    config = {'configurable': {'thread_id': thread_id}}
 
     history = [HumanMessage(content=msg.content)]
     reply = cl.Message(content='')
 
-    for response, meta in agent_graph.stream(
-        {'messages': history},
-        stream_mode='messages',
-        config=config,
-    ):
-        if response.content and meta.get('langgraph_node') == 'final':
-            await reply.stream_token(response.content)
+    try:
+        async for chunk in agent_graph.astream(
+            {'messages': history},
+            config=config,
+        ):
+            if 'final' in chunk and chunk['final'].get('messages'):
+                final_message = chunk['final']['messages'][-1]
+                if hasattr(final_message, 'content') and final_message.content:
+                    await reply.stream_token(final_message.content)
+    except Exception as e:
+        await reply.stream_token(f'Error: {str(e)}')
 
     await reply.send()
