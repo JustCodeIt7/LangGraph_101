@@ -289,10 +289,14 @@ def report_generator(state: ResearchState) -> ResearchState:
     }
 
 
-# Create the LangGraph workflow
-def create_research_graph() -> StateGraph:
+# Create the LangGraph workflow with configurable parameters
+def create_research_graph(max_iterations: int = 3, max_results: int = 5) -> StateGraph:
     """
-    Create and configure the LangGraph research workflow.
+    Create and configure the LangGraph research workflow with parameters.
+    
+    Args:
+        max_iterations: Maximum number of research iterations
+        max_results: Maximum search results per query
     
     Returns:
         Configured StateGraph instance
@@ -300,9 +304,38 @@ def create_research_graph() -> StateGraph:
     # Initialize the graph with our state schema
     workflow = StateGraph(ResearchState)
     
+    # Create parameterized node functions
+    def search_executor_with_params(state: ResearchState) -> ResearchState:
+        """Search executor with configurable parameters."""
+        current_query = state.get("current_query", state["research_topic"])
+        logger.info(f"Executing search for query: {current_query}")
+        
+        # Perform search using Tavily with configurable max_results
+        search_results = tavily_search(current_query, max_results=max_results)
+        
+        # Combine new results with existing ones
+        all_results = state.get("search_results", []) + search_results
+        
+        return {
+            **state,
+            "search_results": all_results
+        }
+    
+    def decide_next_step_with_params(state: ResearchState) -> str:
+        """Decide next step with configurable max_iterations."""
+        num_iterations = state.get("num_iterations", 0)
+        has_follow_up = state.get("current_query") is not None
+        
+        logger.info(f"Deciding next step - Iterations: {num_iterations}/{max_iterations}, Has follow-up: {has_follow_up}")
+        
+        if num_iterations < max_iterations and has_follow_up:
+            return "search_executor_with_params"
+        else:
+            return "report_generator"
+    
     # Add nodes
     workflow.add_node("research_initiator", research_initiator)
-    workflow.add_node("search_executor", search_executor)
+    workflow.add_node("search_executor_with_params", search_executor_with_params)
     workflow.add_node("information_processor", information_processor)
     workflow.add_node("report_generator", report_generator)
     
@@ -310,15 +343,15 @@ def create_research_graph() -> StateGraph:
     workflow.set_entry_point("research_initiator")
     
     # Research loop
-    workflow.add_edge("research_initiator", "search_executor")
-    workflow.add_edge("search_executor", "information_processor")
+    workflow.add_edge("research_initiator", "search_executor_with_params")
+    workflow.add_edge("search_executor_with_params", "information_processor")
     
     # Conditional routing
     workflow.add_conditional_edges(
         "information_processor",
-        decide_next_step,
+        decide_next_step_with_params,
         {
-            "search_executor": "search_executor",
+            "search_executor_with_params": "search_executor_with_params",
             "report_generator": "report_generator"
         }
     )
@@ -329,21 +362,27 @@ def create_research_graph() -> StateGraph:
     return workflow
 
 
-# Main execution function
-def run_research_agent(research_topic: str) -> Dict[str, Any]:
+# Main execution function with parameters and progress callback
+def run_research_agent(research_topic: str, max_iterations: int = 3, max_results: int = 5, progress_callback=None) -> Dict[str, Any]:
     """
-    Run the deep research agent with a given topic.
+    Run the deep research agent with a given topic and parameters.
     
     Args:
         research_topic: The topic to research
+        max_iterations: Maximum number of research iterations
+        max_results: Maximum search results per query
+        progress_callback: Optional callback function for progress updates
     
     Returns:
         Final research state with report
     """
-    logger.info(f"Starting research on topic: {research_topic}")
+    logger.info(f"Starting research on topic: {research_topic} with max_iterations={max_iterations}, max_results={max_results}")
     
-    # Create and compile the graph
-    workflow = create_research_graph()
+    if progress_callback:
+        progress_callback("🚀 Starting research process...", "status")
+    
+    # Create and compile the graph with updated parameters
+    workflow = create_research_graph(max_iterations, max_results)
     app = workflow.compile()
     
     # Initialize state
@@ -357,7 +396,7 @@ def run_research_agent(research_topic: str) -> Dict[str, Any]:
         "current_query": None
     }
     
-    # Run the agent
+    # Run the agent with progress tracking
     final_state = app.invoke(initial_state)
     
     logger.info("Research completed successfully")
@@ -389,8 +428,27 @@ def main():
     on any topic and generates detailed, well-cited reports.
     """)
 
-    # Sidebar with information
+    # Sidebar with information and controls
     with st.sidebar:
+        st.header('Research Parameters')
+
+        # Research configuration
+        max_iterations = st.slider(
+            'Maximum Research Iterations',
+            min_value=1,
+            max_value=10,
+            value=3,
+            help='Higher values provide more comprehensive research but take longer',
+        )
+
+        max_results = st.slider(
+            'Max Search Results per Query',
+            min_value=3,
+            max_value=15,
+            value=5,
+            help='Number of search results to analyze for each query',
+        )
+
         st.header("About")
         st.info("""
         This agent uses:
@@ -398,14 +456,15 @@ def main():
         - **Ollama qwen3** for analysis and report generation
         - **LangGraph** for orchestrating the research workflow
         
-        The agent performs iterative research with up to 3 iterations to ensure comprehensive coverage.
+        Configure research parameters above to customize the depth and scope of your research.
         """)
 
         st.header("Usage Tips")
         st.markdown("""
         - Be specific with your research topic
         - Include key aspects you want to explore
-        - Wait for the full report generation
+        - Adjust parameters based on your needs
+        - Watch the progress in real-time
         """)
 
     # Main interface
@@ -432,12 +491,30 @@ def main():
         with st.chat_message("user"):
             st.markdown(prompt)
         
+        # Define a progress callback function
+        def progress_callback(message: str, level: str = "info"):
+            """Callback function to display progress updates in the chat."""
+            if level == "status":
+                with st.chat_message("assistant"):
+                    st.markdown(f"*{message}*")
+            elif level == "error":
+                with st.chat_message("assistant"):
+                    st.error(message)
+            else:  # Default to info
+                with st.chat_message("assistant"):
+                    st.info(message)
+        
         # Process research request
         with st.chat_message("assistant"):
             with st.spinner("🔍 Researching your topic..."):
                 try:
-                    # Run research agent
-                    result = run_research_agent(prompt.strip())
+                    # Run research agent with parameters and progress callback
+                    result = run_research_agent(
+                        prompt.strip(),
+                        max_iterations=max_iterations,
+                        max_results=max_results,
+                        progress_callback=progress_callback
+                    )
                     
                     # Format response
                     report_content = result.get("report_content", "No report generated")
