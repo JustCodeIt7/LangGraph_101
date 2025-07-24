@@ -11,11 +11,12 @@ from langgraph.graph import StateGraph, END
 from langgraph.prebuilt import ToolNode
 from langchain_core.messages import HumanMessage, AIMessage
 from langchain_core.tools import tool
-from langchain_openai import ChatOpenAI
+from langchain_ollama import ChatOllama
 from tavily import TavilyClient
 import logging
 import streamlit as st
 from dotenv import load_dotenv
+
 # Load environment variables from .env file
 load_dotenv()
 # Configure logging
@@ -25,12 +26,9 @@ logger = logging.getLogger(__name__)
 # Configuration
 MAX_ITERATIONS = 3  # Maximum research iterations to prevent infinite loops
 TAVILY_API_KEY = os.getenv('TAVILY_API_KEY')
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-
+OLLAMA_BASE_URL = os.getenv('OLLAMA_BASE_URL', 'http://eos-james.local:11434')
 if not TAVILY_API_KEY:
-    logger.warning("TAVILY_API_KEY not found in environment variables")
-if not OPENAI_API_KEY:
-    logger.warning("OPENAI_API_KEY not found in environment variables")
+    logger.warning('TAVILY_API_KEY not found in environment variables')
 
 
 # Agent State Definition
@@ -88,12 +86,8 @@ def tavily_search(query: str, max_results: int = 5) -> List[Dict[str, Any]]:
         return []
 
 
-# Initialize LLM
-llm = ChatOpenAI(
-    model="gpt-4o-mini",
-    temperature=0.7,
-    openai_api_key=OPENAI_API_KEY
-)
+# Initialize LLM with Ollama
+llm = ChatOllama(model='qwen3', temperature=0.7, base_url=OLLAMA_BASE_URL)
 
 
 # Node Functions
@@ -401,7 +395,7 @@ def main():
         st.info("""
         This agent uses:
         - **Tavily API** for web search
-        - **OpenAI GPT-4** for analysis and report generation
+        - **Ollama qwen3** for analysis and report generation
         - **LangGraph** for orchestrating the research workflow
         
         The agent performs iterative research with up to 3 iterations to ensure comprehensive coverage.
@@ -502,7 +496,7 @@ def main():
 
     # Footer
     st.markdown("---")
-    st.markdown("*Powered by LangGraph, OpenAI, and Tavily*")
+    st.markdown('*Powered by LangGraph, Ollama, and Tavily*')
 
 
 # TODO Rename this here and in `main`
