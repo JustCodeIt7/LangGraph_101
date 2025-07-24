@@ -202,3 +202,5 @@ context_portal/
 GEMINI.md
 .junie/
 .continue/
+
+!.env.vault
