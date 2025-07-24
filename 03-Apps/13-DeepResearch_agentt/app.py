@@ -495,14 +495,11 @@ def main():
         def progress_callback(message: str, level: str = "info"):
             """Callback function to display progress updates in the chat."""
             if level == "status":
-                with st.chat_message("assistant"):
-                    st.markdown(f"*{message}*")
+                st.write(f"*{message}*")
             elif level == "error":
-                with st.chat_message("assistant"):
-                    st.error(message)
+                st.error(message)
             else:  # Default to info
-                with st.chat_message("assistant"):
-                    st.info(message)
+                st.info(message)
         
         # Process research request
         with st.chat_message("assistant"):
