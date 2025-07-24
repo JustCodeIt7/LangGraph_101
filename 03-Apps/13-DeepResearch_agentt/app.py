@@ -311,7 +311,7 @@ def create_research_graph(max_iterations: int = 3, max_results: int = 5) -> Stat
         logger.info(f"Executing search for query: {current_query}")
         
         # Perform search using Tavily with configurable max_results
-        search_results = tavily_search(current_query, max_results=max_results)
+        search_results = tavily_search.invoke({"query": current_query, "max_results": max_results})
         
         # Combine new results with existing ones
         all_results = state.get("search_results", []) + search_results
@@ -403,26 +403,15 @@ def run_research_agent(research_topic: str, max_iterations: int = 3, max_results
     return final_state
 
 
-# Entry point - only run Streamlit app when called directly
-if __name__ == "__main__":
-    # This will only run when the file is executed directly
-    # Streamlit will handle the actual app execution
-    pass
-
-
 # Streamlit UI Implementation
 def main():
     """Main Streamlit application for the Deep Research Agent."""
-    
+
     # Page configuration
-    st.set_page_config(
-        page_title="Deep Research Agent",
-        page_icon="🔍",
-        layout="wide"
-    )
+    st.set_page_config(page_title='Deep Research Agent', page_icon='🔍', layout='wide')
 
     # Title and description
-    st.title("🔍 Deep Research Agent")
+    st.title('🔍 Deep Research Agent')
     st.markdown("""
     Welcome to the Deep Research Agent! This AI-powered tool performs comprehensive web research
     on any topic and generates detailed, well-cited reports.
@@ -449,7 +438,7 @@ def main():
             help='Number of search results to analyze for each query',
         )
 
-        st.header("About")
+        st.header('About')
         st.info("""
         This agent uses:
         - **Tavily API** for web search
@@ -459,7 +448,7 @@ def main():
         Configure research parameters above to customize the depth and scope of your research.
         """)
 
-        st.header("Usage Tips")
+        st.header('Usage Tips')
         st.markdown("""
         - Be specific with your research topic
         - Include key aspects you want to explore
@@ -468,112 +457,108 @@ def main():
         """)
 
     # Main interface
-    st.header("Chat with Research Agent")
-    
+    st.header('Chat with Research Agent')
+
     # Initialize chat history
-    if "messages" not in st.session_state:
+    if 'messages' not in st.session_state:
         st.session_state.messages = []
-    
-    if "current_research" not in st.session_state:
+
+    if 'current_research' not in st.session_state:
         st.session_state.current_research = None
-    
+
     # Display chat messages
     for message in st.session_state.messages:
-        with st.chat_message(message["role"]):
-            st.markdown(message["content"])
-    
+        with st.chat_message(message['role']):
+            st.markdown(message['content'])
+
     # Chat input
-    if prompt := st.chat_input("Ask me to research any topic..."):
+    if prompt := st.chat_input('Ask me to research any topic...'):
         # Add user message to chat history
-        st.session_state.messages.append({"role": "user", "content": prompt})
-        
+        st.session_state.messages.append({'role': 'user', 'content': prompt})
+
         # Display user message
-        with st.chat_message("user"):
+        with st.chat_message('user'):
             st.markdown(prompt)
-        
+
         # Define a progress callback function
-        def progress_callback(message: str, level: str = "info"):
+        def progress_callback(message: str, level: str = 'info'):
             """Callback function to display progress updates in the chat."""
-            if level == "status":
-                st.write(f"*{message}*")
-            elif level == "error":
+            if level == 'status':
+                st.status(message)
+            elif level == 'error':
                 st.error(message)
             else:  # Default to info
                 st.info(message)
-        
+
         # Process research request
-        with st.chat_message("assistant"):
-            with st.spinner("🔍 Researching your topic..."):
-                try:
-                    # Run research agent with parameters and progress callback
-                    result = run_research_agent(
-                        prompt.strip(),
-                        max_iterations=max_iterations,
-                        max_results=max_results,
-                        progress_callback=progress_callback
-                    )
-                    
-                    # Format response
-                    report_content = result.get("report_content", "No report generated")
-                    response = f"## Research Report: {prompt}\n\n{report_content}"
-                    
-                    # Add research summary
-                    summary = f"""
+        with st.chat_message('assistant'):
+            with st.spinner('🔍 Researching your topic...'):
+                # try:
+                # Run research agent with parameters and progress callback
+                result = run_research_agent(
+                    prompt.strip(),
+                    max_iterations=max_iterations,
+                    max_results=max_results,
+                    progress_callback=progress_callback,
+                )
+
+                # Format response
+                report_content = result.get('report_content', 'No report generated')
+                response = f'## Research Report: {prompt}\n\n{report_content}'
+
+                # Add research summary
+                summary = f"""
                     \n\n---
                     **Research Summary:**
                     - **Sources analyzed:** {len(result.get('search_results', []))}
                     - **Search queries:** {len(result.get('search_queries', []))}
                     - **Iterations:** {result.get('num_iterations', 0)}
                     """
-                    
-                    full_response = response + summary
-                    
-                    # Display assistant response
-                    st.markdown(full_response)
-                    
-                    # Add assistant response to chat history
-                    st.session_state.messages.append({
-                        "role": "assistant",
-                        "content": full_response
-                    })
-                    
-                    # Store current research
-                    st.session_state.current_research = result
-                    
-                except Exception as e:
-                    error_msg = f"❌ Research error: {str(e)}"
-                    st.error(error_msg)
-                    st.session_state.messages.append({
-                        "role": "assistant",
-                        "content": error_msg
-                    })
-    
+
+                full_response = response + summary
+
+                # Display assistant response
+                st.markdown(full_response)
+
+                # Add assistant response to chat history
+                st.session_state.messages.append({'role': 'assistant', 'content': full_response})
+
+                # Store current research
+                st.session_state.current_research = result
+
+            # except Exception as e:
+            #     error_msg = f"❌ Research error: {str(e)}"
+            #     st.error(error_msg)
+            #     st.session_state.messages.append({
+            #         "role": "assistant",
+            #         "content": error_msg
+            #     })
+
     # Sidebar with additional controls
     with st.sidebar:
-        st.header("Chat Controls")
-        
-        if st.button("🗑️ Clear Chat"):
+        st.header('Chat Controls')
+
+        if st.button('🗑️ Clear Chat'):
             st.session_state.messages = []
             st.session_state.current_research = None
             st.rerun()
-        
+
         if st.session_state.current_research:
-            with st.expander("📊 Latest Research Details"):
+            with st.expander('📊 Latest Research Details'):
                 research = st.session_state.current_research
                 st.markdown(f"""
                 **Search Queries Used:**
-                {chr(10).join(f"- {query}" for query in research.get('search_queries', []))}
+                {chr(10).join(f'- {query}' for query in research.get('search_queries', []))}
                 
                 **Sources Found:** {len(research.get('search_results', []))}
                 **Iterations:** {research.get('num_iterations', 0)}
                 """)
 
     # Footer
-    st.markdown("---")
+    st.markdown('---')
     st.markdown('*Powered by LangGraph, Ollama, and Tavily*')
 
 
-# TODO Rename this here and in `main`
 def _extracted_from_main_57(research_topic):
     # Run the research agent
     result = run_research_agent(research_topic.strip())
