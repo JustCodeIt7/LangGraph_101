@@ -54,11 +54,7 @@ def get_weather(location: str) -> str:
 
 # %%
 # Test Example 1: Weather query
-print('=== Example 1: Weather Tool ===')
-agent1 = create_react_agent(model=llm, tools=[get_weather])
-result1 = agent1.invoke({'messages': [{'role': 'user', 'content': "What's the weather like in Tokyo?"}]})
-print(result1['messages'][-1].content)
-print()
+
 
 
 # %%
