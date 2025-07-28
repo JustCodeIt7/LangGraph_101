@@ -38,17 +38,9 @@ llm = ChatLiteLLM(
     model=f'openrouter/{model_name}',
     temperature=0.1,
     api_base='https://openrouter.ai/api/v1',
-    # api_key=api_key,
     openrouter_api_key=api_key,
 )
 
-
-# llm = ChatOllama(
-#     model='phi4-mini',
-#     temperature=0.1,
-#     api_base='http://eos.local:11434',
-#     streaming=False,
-# )
 # %%
 # ############### Example 1: Weather Tool with structured response ###############
 @tool
