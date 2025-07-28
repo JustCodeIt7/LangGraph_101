@@ -128,7 +128,7 @@ def search_executor(state: ResearchState) -> ResearchState:
     logger.info(f"Executing search for query: {current_query}")
     
     # Perform search using Tavily
-    search_results = tavily_search(current_query)
+    search_results = tavily_search.invoke({"query": current_query, "max_results": 5})
     
     # Combine new results with existing ones
     all_results = state.get("search_results", []) + search_results
