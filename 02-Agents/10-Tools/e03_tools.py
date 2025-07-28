@@ -1,9 +1,10 @@
 """
-Example 3: Basic LangGraph Tools - Three Practical Examples
-This file demonstrates three essential LangGraph tool patterns:
+Example 3: Basic LangGraph Tools - Four Practical Examples
+This file demonstrates four essential LangGraph tool patterns:
 1. Weather Tool - Simulates API calls with structured data
 2. File Operations Tool - Shows file system interactions
 3. Stock Price Tool - Real-time financial data with yfinance
+4. Math Tools - Chained calculations showing tool interoperability
 """
 
 from langchain_core.tools import tool
@@ -12,9 +13,12 @@ from langchain.chat_models import init_chat_model
 import json
 import os
 from datetime import datetime
+from rich import print
+from langchain_litellm import ChatLiteLLM
 
 # Initialize the LLM
-llm = init_chat_model("ollama:llama3.2", temperature=0)
+# llm = init_chat_model(model='llama3.2', model_provider='ollama', temperature=0, api_base='http://eos.local:11434')
+llm = init_chat_model(model='ollama:phi4-mini', temperature=0, api_base='http://eos.local:11434')
 
 # Example 1: Weather Tool with structured response
 @tool
@@ -99,9 +103,49 @@ def get_stock_price(ticker: str) -> str:
     except Exception as e:
         return f"Error fetching stock data: {str(e)}"
 
-# Create agent with all three tools
-tools = [get_weather, save_note, get_stock_price]
+# Example 4: Math tools for chained calculations
+@tool
+def add_numbers(a: float, b: float) -> float:
+    """Add two numbers together.
+
+    Args:
+        a: First number
+        b: Second number
+    """
+    return a + b
+
+
+@tool
+def multiply_numbers(a: float, b: float) -> float:
+    """Multiply two numbers together.
+
+    Args:
+        a: First number
+        b: Second number
+    """
+    return a * b
+
+
+@tool
+def calculate_stock_value(shares: float, price_per_share: float) -> str:
+    """Calculate the total value of stock shares.
+
+    Args:
+        shares: Number of shares owned
+        price_per_share: Current price per share
+    """
+    try:
+        total_value = shares * price_per_share
+        return f'Total stock value: ${total_value:.2f} ({shares} shares at ${price_per_share:.2f} per share)'
+    except Exception as e:
+        return f'Error calculating stock value: {str(e)}'
+
+
+# Create agent with all tools
+tools = [get_weather, save_note, get_stock_price, add_numbers, multiply_numbers, calculate_stock_value]
 agent = create_react_agent(model=llm, tools=tools)
+# agent = ChatLiteLLM(model='ollama/llama3.2', api_base='http://eos.local:11434', temperature=0, tools=tools)
+
 
 # Test Example 1: Weather query
 print("=== Example 1: Weather Tool ===")
@@ -141,3 +185,29 @@ result5 = agent.invoke({
     "messages": [{"role": "user", "content": "Get the stock price for TSLA, check the weather in San Francisco, and save both results to a file called 'market_weather_report'"}]
 })
 print(result5['messages'][-1].content)
+print()
+
+# Test Example 4: Chained math operations
+print('=== Example 4: Chained Math Tools ===')
+result6 = agent.invoke({
+    'messages': [
+        {
+            'role': 'user',
+            'content': 'Calculate the total value of 100 shares of Apple stock. First get the current price, then multiply it by 100.',
+        }
+    ]
+})
+print(result6['messages'][-1].content)
+print()
+
+# Test complex chained calculation
+print('=== Complex Chained Calculation ===')
+result7 = agent.invoke({
+    'messages': [
+        {
+            'role': 'user',
+            'content': "I own 50 shares of TSLA and 30 shares of AAPL. What is the total value of my portfolio? You'll need to get both stock prices and do multiple calculations.",
+        }
+    ]
+})
+print(result7['messages'][-1].content)
