@@ -18,11 +18,30 @@ from datetime import datetime
 from rich import print
 from langchain_litellm import ChatLiteLLM
 import sqlite3
+from utils import create_mock_database
+import pathlib
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
+
+api_key = os.getenv('OPENROUTER_API_KEY')
+
+
+# change working directory to the current file's directory
+pathlib.Path(__file__).parent.resolve()
+os.chdir(pathlib.Path(__file__).parent.resolve())
 
 # Initialize the LLM
 # llm = init_chat_model(model='llama3.2', model_provider='ollama', temperature=0, api_base='http://eos.local:11434')
-llm = init_chat_model(model='ollama:phi4-mini', temperature=0, api_base='http://eos.local:11434')
-
+# llm = init_chat_model(model='ollama:phi4-mini', temperature=0.1, api_base='http://eos.local:11434')
+llm = init_chat_model(
+    model='openai:mistralai/mistral-nemo',
+    # model_provider='openai',
+    temperature=0.1,
+    api_base='https://openrouter.ai/api/v1',
+    api_key=api_key,
+)
 # %%
 # Example 1: Weather Tool with structured response
 @tool
@@ -42,12 +61,21 @@ def get_weather(location: str) -> str:
     }
     return json.dumps(weather_data, indent=2)
 
+# Test Example 1: Weather query
+print('=== Example 1: Weather Tool ===')
+agent1 = create_react_agent(model=llm, tools=[get_weather])
+result1 = agent1.invoke({'messages': [{'role': 'user', 'content': "What's the weather like in Tokyo?"}]})
+print(result1['messages'][-1].content)
+print()
+
+
 # %%
 # Example 2: File operations tool
 @tool
 def save_note(filename: str, content: str) -> str:
-    """Save a text note to a file.
-    
+    """
+    Save a text note for the user to a file.
+
     Args:
         filename: Name of the file to save (without extension)
         content: The text content to save
@@ -64,6 +92,21 @@ def save_note(filename: str, content: str) -> str:
         return f"Note saved successfully to {filepath}"
     except Exception as e:
         return f"Error saving note: {str(e)}"
+
+# Test Example 2: File operation
+print('=== Example 2: File Operations Tool ===')
+agent2 = create_react_agent(model=llm, tools=[save_note])
+result2 = agent2.invoke({
+    'messages': [
+        {
+            'role': 'user',
+            'content': "Save a note called to file 'shopping_list' with my groceries: milk, eggs, bread, and cheese",
+        }
+    ]
+})
+print(result2['messages'][-1].content)
+print()
+
 
 # %%
 # Example 3: Stock price tool using yfinance
@@ -109,6 +152,28 @@ def get_stock_price(ticker: str) -> str:
     except Exception as e:
         return f"Error fetching stock data: {str(e)}"
 
+# Test Example 3: Stock price tool
+print('=== Example 3: Stock Price Tool ===')
+agent3 = create_react_agent(model=llm, tools=[get_stock_price])
+result4 = agent3.invoke({'messages': [{'role': 'user', 'content': "What's the current price of Apple stock?"}]})
+print(result4['messages'][-1].content)
+print()
+
+# Test all tools together: Stock + Weather + File
+print('=== All Tools Combined ===')
+agent3b = create_react_agent(model=llm, tools=[get_stock_price, get_weather, save_note])
+result5 = agent3b.invoke({
+    'messages': [
+        {
+            'role': 'user',
+            'content': "Get the stock price for TSLA, check the weather in San Francisco, and save both results to a file called 'market_weather_report'",
+        }
+    ]
+})
+print(result5['messages'][-1].content)
+print()
+
+
 # %%
 # Example 4: Math tools for chained calculations
 @tool
@@ -147,39 +212,37 @@ def calculate_stock_value(shares: float, price_per_share: float) -> str:
     except Exception as e:
         return f'Error calculating stock value: {str(e)}'
 
+# Test Example 4: Chained math operations
+print('=== Example 4: Chained Math Tools ===')
+agent4 = create_react_agent(model=llm, tools=[get_stock_price, calculate_stock_value])
+result6 = agent4.invoke({
+    'messages': [
+        {
+            'role': 'user',
+            'content': 'Calculate the total value of 100 shares of Apple stock. First get the current price, then multiply it by 100.',
+        }
+    ]
+})
+print(result6['messages'][-1].content)
+print()
+
+# Test complex chained calculation
+print('=== Complex Chained Calculation ===')
+agent4b = create_react_agent(model=llm, tools=[get_stock_price, calculate_stock_value, add_numbers, multiply_numbers])
+result7 = agent4b.invoke({
+    'messages': [
+        {
+            'role': 'user',
+            'content': "I own 50 shares of TSLA and 30 shares of AAPL. What is the total value of my portfolio? You'll need to get both stock prices and do multiple calculations.",
+        }
+    ]
+})
+print(result7['messages'][-1].content)
+print()
+
+
 # %%
 # Example 5: SQLite Database Query Tool
-def create_mock_database():
-    """Create a mock SQLite database with fake employee data for testing."""
-    conn = sqlite3.connect('company.db')
-    cursor = conn.cursor()
-    
-    # Create employees table
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS employees (
-            id INTEGER PRIMARY KEY,
-            name TEXT NOT NULL,
-            department TEXT NOT NULL,
-            salary REAL NOT NULL,
-            hire_date TEXT NOT NULL
-        )
-    ''')
-    
-    # Insert mock data
-    employees = [
-        (1, 'Alice Johnson', 'Engineering', 95000, '2020-01-15'),
-        (2, 'Bob Smith', 'Marketing', 75000, '2019-03-22'),
-        (3, 'Carol Davis', 'Engineering', 105000, '2018-07-10'),
-        (4, 'David Wilson', 'Sales', 65000, '2021-05-30'),
-        (5, 'Eve Brown', 'Marketing', 80000, '2020-11-12'),
-        (6, 'Frank Miller', 'Engineering', 92000, '2019-09-05'),
-        (7, 'Grace Lee', 'HR', 70000, '2021-02-18'),
-        (8, 'Henry Taylor', 'Sales', 72000, '2020-08-24')
-    ]
-    
-    cursor.executemany('INSERT OR REPLACE INTO employees VALUES (?, ?, ?, ?, ?)', employees)
-    conn.commit()
-    conn.close()
 
 @tool
 def query_database(sql_query: str) -> str:
@@ -219,92 +282,29 @@ def query_database(sql_query: str) -> str:
         return f"Error executing query: {str(e)}"
 
 # Create the mock database
-create_mock_database()
-
-# %%
-# Create agent with all tools
-tools = [get_weather, save_note, get_stock_price, add_numbers, multiply_numbers, calculate_stock_value, query_database]
-agent = create_react_agent(model=llm, tools=tools)
-# agent = ChatLiteLLM(model='ollama/llama3.2', api_base='http://eos.local:11434', temperature=0, tools=tools)
-
-
-# Test Example 1: Weather query
-print("=== Example 1: Weather Tool ===")
-result1 = agent.invoke({
-    "messages": [{"role": "user", "content": "What's the weather like in Tokyo?"}]
-})
-print(result1['messages'][-1].content)
-print()
-
-# Test Example 2: File operation
-print("=== Example 2: File Operations Tool ===")
-result2 = agent.invoke({
-    "messages": [{"role": "user", "content": "Save a note called 'shopping' with my grocery list: milk, eggs, bread, and cheese"}]
-})
-print(result2['messages'][-1].content)
-print()
-
-# Test combined usage
-print("=== Combined Usage: Weather + File Save ===")
-result3 = agent.invoke({
-    "messages": [{"role": "user", "content": "Get the weather in Paris and save it to a file called 'paris_weather'"}]
-})
-print(result3['messages'][-1].content)
-print()
-
-# Test Example 3: Stock price tool
-print("=== Example 3: Stock Price Tool ===")
-result4 = agent.invoke({
-    "messages": [{"role": "user", "content": "What's the current price of Apple stock?"}]
-})
-print(result4['messages'][-1].content)
-print()
-
-# Test all tools together
-print("=== All Tools Combined ===")
-result5 = agent.invoke({
-    "messages": [{"role": "user", "content": "Get the stock price for TSLA, check the weather in San Francisco, and save both results to a file called 'market_weather_report'"}]
-})
-print(result5['messages'][-1].content)
-print()
-
-# Test Example 4: Chained math operations
-print('=== Example 4: Chained Math Tools ===')
-result6 = agent.invoke({
-    'messages': [
-        {
-            'role': 'user',
-            'content': 'Calculate the total value of 100 shares of Apple stock. First get the current price, then multiply it by 100.',
-        }
-    ]
-})
-print(result6['messages'][-1].content)
-print()
-
-# Test complex chained calculation
-print('=== Complex Chained Calculation ===')
-result7 = agent.invoke({
-    'messages': [
-        {
-            'role': 'user',
-            'content': "I own 50 shares of TSLA and 30 shares of AAPL. What is the total value of my portfolio? You'll need to get both stock prices and do multiple calculations.",
-        }
-    ]
-})
-print(result7['messages'][-1].content)
-print()
+# create_mock_database()
 
 # Test Example 5: Database query tool
-print("=== Example 5: Database Query Tool ===")
-result8 = agent.invoke({
-    "messages": [{"role": "user", "content": "Find all employees in the Engineering department with a salary above 90000"}]
+print('=== Example 5: Database Query Tool ===')
+agent5 = create_react_agent(model=llm, tools=[query_database])
+result8 = agent5.invoke({
+    'messages': [
+        {'role': 'user', 'content': 'Find all employees in the Engineering department with a salary above 90000'}
+    ]
 })
 print(result8['messages'][-1].content)
 print()
 
 # Test complex database query
-print("=== Complex Database Query ===")
-result9 = agent.invoke({
-    "messages": [{"role": "user", "content": "What's the average salary in each department? Show the results sorted by average salary descending."}]
+print('=== Complex Database Query ===')
+agent5b = create_react_agent(model=llm, tools=[query_database])
+result9 = agent5b.invoke({
+    'messages': [
+        {
+            'role': 'user',
+            'content': "What's the average salary in each department? Show the results sorted by average salary descending.",
+        }
+    ]
 })
 print(result9['messages'][-1].content)
+# %%
