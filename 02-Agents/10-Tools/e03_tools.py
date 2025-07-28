@@ -1,3 +1,4 @@
+# %%
 """
 Example 3: Basic LangGraph Tools - Five Practical Examples
 This file demonstrates five essential LangGraph tool patterns:
@@ -22,6 +23,7 @@ import sqlite3
 # llm = init_chat_model(model='llama3.2', model_provider='ollama', temperature=0, api_base='http://eos.local:11434')
 llm = init_chat_model(model='ollama:phi4-mini', temperature=0, api_base='http://eos.local:11434')
 
+# %%
 # Example 1: Weather Tool with structured response
 @tool
 def get_weather(location: str) -> str:
@@ -40,6 +42,7 @@ def get_weather(location: str) -> str:
     }
     return json.dumps(weather_data, indent=2)
 
+# %%
 # Example 2: File operations tool
 @tool
 def save_note(filename: str, content: str) -> str:
@@ -62,6 +65,7 @@ def save_note(filename: str, content: str) -> str:
     except Exception as e:
         return f"Error saving note: {str(e)}"
 
+# %%
 # Example 3: Stock price tool using yfinance
 @tool
 def get_stock_price(ticker: str) -> str:
@@ -105,6 +109,7 @@ def get_stock_price(ticker: str) -> str:
     except Exception as e:
         return f"Error fetching stock data: {str(e)}"
 
+# %%
 # Example 4: Math tools for chained calculations
 @tool
 def add_numbers(a: float, b: float) -> float:
@@ -142,7 +147,7 @@ def calculate_stock_value(shares: float, price_per_share: float) -> str:
     except Exception as e:
         return f'Error calculating stock value: {str(e)}'
 
-
+# %%
 # Example 5: SQLite Database Query Tool
 def create_mock_database():
     """Create a mock SQLite database with fake employee data for testing."""
@@ -216,6 +221,7 @@ def query_database(sql_query: str) -> str:
 # Create the mock database
 create_mock_database()
 
+# %%
 # Create agent with all tools
 tools = [get_weather, save_note, get_stock_price, add_numbers, multiply_numbers, calculate_stock_value, query_database]
 agent = create_react_agent(model=llm, tools=tools)
