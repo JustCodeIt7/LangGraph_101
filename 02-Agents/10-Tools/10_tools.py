@@ -41,6 +41,8 @@ llm = ChatLiteLLM(
     # api_key=api_key,
     openrouter_api_key=api_key,
 )
+
+
 # llm = ChatOllama(
 #     model='phi4-mini',
 #     temperature=0.1,
@@ -52,19 +54,21 @@ llm = ChatLiteLLM(
 @tool
 def get_weather(location: str) -> str:
     """Get current weather information for a given location.
-    
+
     Args:
         location: The city name to get weather for
     """
     # Simulate weather API response
     weather_data = {
-        "location": location.title(),
-        "temperature": 72,
-        "condition": "Sunny",
-        "humidity": 45,
-        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M")
+        'location': location.title(),
+        'temperature': 72,
+        'condition': 'Sunny',
+        'humidity': 45,
+        'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M'),
     }
     return json.dumps(weather_data, indent=2)
+
+
 # %%
 # Test Example 1: Weather query
 print('=== Example 1: Weather Tool ===')
@@ -86,17 +90,19 @@ def save_note(filename: str, content: str) -> str:
         content: The text content to save
     """
     try:
-        filepath = f"notes/{filename}.txt"
-        os.makedirs("notes", exist_ok=True)
-        
-        with open(filepath, "w") as f:
-            f.write(f"Note saved at {datetime.now()}\n")
-            f.write("-" * 40 + "\n")
+        filepath = f'notes/{filename}.txt'
+        os.makedirs('notes', exist_ok=True)
+
+        with open(filepath, 'w') as f:
+            f.write(f'Note saved at {datetime.now()}\n')
+            f.write('-' * 40 + '\n')
             f.write(content)
-        
-        return f"Note saved successfully to {filepath}"
+
+        return f'Note saved successfully to {filepath}'
     except Exception as e:
-        return f"Error saving note: {str(e)}"
+        return f'Error saving note: {str(e)}'
+
+
 # %%
 # Test Example 2: File operation
 print('=== Example 2: File Operations Tool - File system interactions ===')
@@ -118,44 +124,46 @@ print()
 @tool
 def get_stock_price(ticker: str) -> str:
     """Get current stock price and basic information for a given ticker symbol.
-    
+
     Args:
         ticker: Stock ticker symbol (e.g., AAPL, GOOGL, TSLA)
     """
     try:
         import yfinance as yf
-        
+
         stock = yf.Ticker(ticker.upper())
         info = stock.info
-        
+
         # Get current price data
         current_price = info.get('currentPrice') or info.get('regularMarketPrice', 'N/A')
         previous_close = info.get('previousClose', 'N/A')
         market_cap = info.get('marketCap', 'N/A')
         company_name = info.get('longName', ticker.upper())
-        
+
         # Calculate change
         if current_price != 'N/A' and previous_close != 'N/A':
             change = current_price - previous_close
             change_percent = (change / previous_close) * 100
         else:
             change = change_percent = 'N/A'
-        
+
         stock_data = {
-            "ticker": ticker.upper(),
-            "company": company_name,
-            "current_price": f"${current_price:.2f}" if isinstance(current_price, (int, float)) else current_price,
-            "change": f"${change:.2f} ({change_percent:+.2f}%)" if isinstance(change, (int, float)) else change,
-            "market_cap": f"${market_cap:,}" if isinstance(market_cap, (int, float)) else market_cap,
-            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M")
+            'ticker': ticker.upper(),
+            'company': company_name,
+            'current_price': f'${current_price:.2f}' if isinstance(current_price, (int, float)) else current_price,
+            'change': f'${change:.2f} ({change_percent:+.2f}%)' if isinstance(change, (int, float)) else change,
+            'market_cap': f'${market_cap:,}' if isinstance(market_cap, (int, float)) else market_cap,
+            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M'),
         }
-        
+
         return json.dumps(stock_data, indent=2)
-        
+
     except ImportError:
-        return "Error: yfinance package not installed. Run: pip install yfinance"
+        return 'Error: yfinance package not installed. Run: pip install yfinance'
     except Exception as e:
-        return f"Error fetching stock data: {str(e)}"
+        return f'Error fetching stock data: {str(e)}'
+
+
 # %%
 # Test Example 3: Stock price tool
 print('=== Example 3: Stock Price Tool - Real-time financial data with yfinance ===')
@@ -203,28 +211,16 @@ def multiply_numbers(a: float, b: float) -> float:
     return a * b
 
 
-@tool
-def calculate_stock_value(shares: float, price_per_share: float) -> str:
-    """Calculate the total value of stock shares.
-
-    Args:
-        shares: Number of shares owned
-        price_per_share: Current price per share
-    """
-    try:
-        total_value = shares * price_per_share
-        return f'Total stock value: ${total_value:.2f} ({shares} shares at ${price_per_share:.2f} per share)'
-    except Exception as e:
-        return f'Error calculating stock value: {str(e)}'
 # %%
 # Test Example 4: Chained math operations
 print('=== Example 4: Math Tools - Chained calculations showing tool interoperability ===')
-agent4 = create_react_agent(model=llm, tools=[get_stock_price, calculate_stock_value])
+agent4 = create_react_agent(model=llm, tools=[add_numbers, multiply_numbers])
+q = 'If I add 10 and 20, then multiply the result by 2, what do I get?'
 result6 = agent4.invoke({
     'messages': [
         {
             'role': 'user',
-            'content': 'Calculate the total value of 100 shares of Apple stock. First get the current price, then multiply it by 100.',
+            'content': q,
         }
     ]
 })
@@ -233,12 +229,13 @@ print()
 # %%
 # Test complex chained calculation
 print('=== Example 4: Complex Chained Calculation - Math Tools ===')
-agent4b = create_react_agent(model=llm, tools=[get_stock_price, calculate_stock_value, add_numbers, multiply_numbers])
-result7 = agent4b.invoke({
+agent4 = create_react_agent(model=llm, tools=[get_stock_price, add_numbers, multiply_numbers])
+q = "I own 50 shares of TSLA and 30 shares of AAPL. What is the total value of my portfolio? You'll need to get both stock prices and do multiple calculations."
+result7 = agent4.invoke({
     'messages': [
         {
             'role': 'user',
-            'content': "I own 50 shares of TSLA and 30 shares of AAPL. What is the total value of my portfolio? You'll need to get both stock prices and do multiple calculations.",
+            'content': q,
         }
     ]
 })
@@ -249,42 +246,40 @@ print()
 # %%
 # ############### Example 5: SQLite Database Query Tool - LLM-generated SQL queries with mock data ###############
 
+
 @tool
 def query_database(sql_query: str) -> str:
     """Execute a SQL query on the company database and return the results as JSON.
-    
+
     Args:
         sql_query: The SQL query to execute (SELECT statements only for safety)
     """
     try:
         # Security check - only allow SELECT statements
         if not sql_query.strip().upper().startswith('SELECT'):
-            return "Error: Only SELECT queries are allowed for security reasons."
-        
+            return 'Error: Only SELECT queries are allowed for security reasons.'
+
         conn = sqlite3.connect('company.db')
         cursor = conn.cursor()
-        
+
         # Execute the query
         cursor.execute(sql_query)
-        
+
         # Get column names
         columns = [description[0] for description in cursor.description]
-        
+
         # Get results
         results = cursor.fetchall()
         conn.close()
-        
+
         # Format as list of dictionaries
         formatted_results = [dict(zip(columns, row)) for row in results]
-        
-        return json.dumps({
-            "query": sql_query,
-            "results": formatted_results,
-            "count": len(formatted_results)
-        }, indent=2)
-        
+
+        return json.dumps({'query': sql_query, 'results': formatted_results, 'count': len(formatted_results)}, indent=2)
+
     except Exception as e:
-        return f"Error executing query: {str(e)}"
+        return f'Error executing query: {str(e)}'
+
 
 # Create the mock database
 # create_mock_database()
