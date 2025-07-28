@@ -1,0 +1,18 @@
+[
+  [
+    "user",
+    "hi"
+  ],
+  [
+    "assistant",
+    "Persistent Echo: hi"
+  ],
+  [
+    "user",
+    "code"
+  ],
+  [
+    "assistant",
+    "Persistent Echo: code"
+  ]
+]
