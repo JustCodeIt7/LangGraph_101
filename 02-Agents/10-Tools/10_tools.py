@@ -99,7 +99,7 @@ def save_note(filename: str, content: str) -> str:
         return f"Error saving note: {str(e)}"
 # %%
 # Test Example 2: File operation
-print('=== Example 2: File Operations Tool ===')
+print('=== Example 2: File Operations Tool - File system interactions ===')
 agent2 = create_react_agent(model=llm, tools=[save_note])
 result2 = agent2.invoke({
     'messages': [
@@ -158,7 +158,7 @@ def get_stock_price(ticker: str) -> str:
         return f"Error fetching stock data: {str(e)}"
 # %%
 # Test Example 3: Stock price tool
-print('=== Example 3: Stock Price Tool ===')
+print('=== Example 3: Stock Price Tool - Real-time financial data with yfinance ===')
 agent3 = create_react_agent(model=llm, tools=[get_stock_price])
 result4 = agent3.invoke({'messages': [{'role': 'user', 'content': "What's the current price of Apple stock?"}]})
 print(result4['messages'][-1].content)
@@ -218,7 +218,7 @@ def calculate_stock_value(shares: float, price_per_share: float) -> str:
         return f'Error calculating stock value: {str(e)}'
 # %%
 # Test Example 4: Chained math operations
-print('=== Example 4: Chained Math Tools ===')
+print('=== Example 4: Math Tools - Chained calculations showing tool interoperability ===')
 agent4 = create_react_agent(model=llm, tools=[get_stock_price, calculate_stock_value])
 result6 = agent4.invoke({
     'messages': [
@@ -232,7 +232,7 @@ print(result6['messages'][-1].content)
 print()
 # %%
 # Test complex chained calculation
-print('=== Complex Chained Calculation ===')
+print('=== Example 4: Complex Chained Calculation - Math Tools ===')
 agent4b = create_react_agent(model=llm, tools=[get_stock_price, calculate_stock_value, add_numbers, multiply_numbers])
 result7 = agent4b.invoke({
     'messages': [
@@ -290,7 +290,7 @@ def query_database(sql_query: str) -> str:
 # create_mock_database()
 # %%
 # Test Example 5: Database query tool
-print('=== Example 5: Database Query Tool ===')
+print('=== Example 5: SQLite Database Query Tool - LLM-generated SQL queries with mock data ===')
 
 
 agent5 = create_react_agent(model=llm, tools=[query_database])
@@ -298,7 +298,7 @@ agent5 = create_react_agent(model=llm, tools=[query_database])
 result8 = agent5.invoke({
     'messages': [{'role': 'user', 'content': 'count the number of employees in the company database'}]
 })
-print('=== Count Employees ===')
+print('=== Example 5: Count Employees - Database Query ===')
 print(result8['messages'][-1].content)
 print()
 
@@ -312,7 +312,7 @@ print(result8['messages'][-1].content)
 print()
 # %%
 # Test complex database query
-print('=== Complex Database Query ===')
+print('=== Example 5: Complex Database Query - SQL Analysis ===')
 agent5b = create_react_agent(model=llm, tools=[query_database])
 result9 = agent5b.invoke({
     'messages': [
