@@ -58,15 +58,6 @@ def get_weather(location: str) -> str:
     Args:
         location: The city name to get weather for
     """
-    # Simulate weather API response
-    weather_data = {
-        'location': location.title(),
-        'temperature': 72,
-        'condition': 'Sunny',
-        'humidity': 45,
-        'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M'),
-    }
-    return json.dumps(weather_data, indent=2)
 
 
 # %%
@@ -89,35 +80,10 @@ def save_note(filename: str, content: str) -> str:
         filename: Name of the file to save (without extension)
         content: The text content to save
     """
-    try:
-        filepath = f'notes/{filename}.txt'
-        os.makedirs('notes', exist_ok=True)
-
-        with open(filepath, 'w') as f:
-            f.write(f'Note saved at {datetime.now()}\n')
-            f.write('-' * 40 + '\n')
-            f.write(content)
-
-        return f'Note saved successfully to {filepath}'
-    except Exception as e:
-        return f'Error saving note: {str(e)}'
 
 
 # %%
 # Test Example 2: File operation
-print('=== Example 2: File Operations Tool - File system interactions ===')
-agent2 = create_react_agent(model=llm, tools=[save_note])
-result2 = agent2.invoke({
-    'messages': [
-        {
-            'role': 'user',
-            'content': "Save a note called to file 'shopping_list' with my groceries: milk, eggs, bread, and cheese",
-        }
-    ]
-})
-print(result2['messages'][-1].content)
-print()
-
 
 # %%
 # ############### Example 3: Stock Price Tool - Real-time financial data with yfinance ###############
@@ -128,64 +94,13 @@ def get_stock_price(ticker: str) -> str:
     Args:
         ticker: Stock ticker symbol (e.g., AAPL, GOOGL, TSLA)
     """
-    try:
-        import yfinance as yf
-
-        stock = yf.Ticker(ticker.upper())
-        info = stock.info
-
-        # Get current price data
-        current_price = info.get('currentPrice') or info.get('regularMarketPrice', 'N/A')
-        previous_close = info.get('previousClose', 'N/A')
-        market_cap = info.get('marketCap', 'N/A')
-        company_name = info.get('longName', ticker.upper())
-
-        # Calculate change
-        if current_price != 'N/A' and previous_close != 'N/A':
-            change = current_price - previous_close
-            change_percent = (change / previous_close) * 100
-        else:
-            change = change_percent = 'N/A'
-
-        stock_data = {
-            'ticker': ticker.upper(),
-            'company': company_name,
-            'current_price': f'${current_price:.2f}' if isinstance(current_price, (int, float)) else current_price,
-            'change': f'${change:.2f} ({change_percent:+.2f}%)' if isinstance(change, (int, float)) else change,
-            'market_cap': f'${market_cap:,}' if isinstance(market_cap, (int, float)) else market_cap,
-            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M'),
-        }
-
-        return json.dumps(stock_data, indent=2)
-
-    except ImportError:
-        return 'Error: yfinance package not installed. Run: pip install yfinance'
-    except Exception as e:
-        return f'Error fetching stock data: {str(e)}'
 
 
 # %%
 # Test Example 3: Stock price tool
-print('=== Example 3: Stock Price Tool - Real-time financial data with yfinance ===')
-agent3 = create_react_agent(model=llm, tools=[get_stock_price])
-result4 = agent3.invoke({'messages': [{'role': 'user', 'content': "What's the current price of Apple stock?"}]})
-print(result4['messages'][-1].content)
-print()
+
 # %%
 # Test all tools together: Stock + Weather + File
-print('=== All Tools Combined ===')
-agent3b = create_react_agent(model=llm, tools=[get_stock_price, get_weather, save_note])
-result5 = agent3b.invoke({
-    'messages': [
-        {
-            'role': 'user',
-            'content': "Get the stock price for TSLA, check the weather in San Francisco, and save both results to a file called 'market_weather_report'",
-        }
-    ]
-})
-print(result5['messages'][-1].content)
-print()
-
 
 # %%
 # ############### Example 4: Math Tools - Chained calculations showing tool interoperability ###############
@@ -197,7 +112,6 @@ def add_numbers(a: float, b: float) -> float:
         a: First number
         b: Second number
     """
-    return a + b
 
 
 @tool
@@ -208,39 +122,13 @@ def multiply_numbers(a: float, b: float) -> float:
         a: First number
         b: Second number
     """
-    return a * b
 
 
 # %%
 # Test Example 4: Chained math operations
-print('=== Example 4: Math Tools - Chained calculations showing tool interoperability ===')
-agent4 = create_react_agent(model=llm, tools=[add_numbers, multiply_numbers])
-q = 'If I add 10 and 20, then multiply the result by 2, what do I get?'
-result6 = agent4.invoke({
-    'messages': [
-        {
-            'role': 'user',
-            'content': q,
-        }
-    ]
-})
-print(result6['messages'][-1].content)
-print()
+
 # %%
 # Test complex chained calculation
-print('=== Example 4: Complex Chained Calculation - Math Tools ===')
-agent4 = create_react_agent(model=llm, tools=[get_stock_price, add_numbers, multiply_numbers])
-q = "I own 50 shares of TSLA and 30 shares of AAPL. What is the total value of my portfolio? You'll need to get both stock prices and do multiple calculations."
-result7 = agent4.invoke({
-    'messages': [
-        {
-            'role': 'user',
-            'content': q,
-        }
-    ]
-})
-print(result7['messages'][-1].content)
-print()
 
 
 # %%
@@ -254,31 +142,6 @@ def query_database(sql_query: str) -> str:
     Args:
         sql_query: The SQL query to execute (SELECT statements only for safety)
     """
-    try:
-        # Security check - only allow SELECT statements
-        if not sql_query.strip().upper().startswith('SELECT'):
-            return 'Error: Only SELECT queries are allowed for security reasons.'
-
-        conn = sqlite3.connect('company.db')
-        cursor = conn.cursor()
-
-        # Execute the query
-        cursor.execute(sql_query)
-
-        # Get column names
-        columns = [description[0] for description in cursor.description]
-
-        # Get results
-        results = cursor.fetchall()
-        conn.close()
-
-        # Format as list of dictionaries
-        formatted_results = [dict(zip(columns, row)) for row in results]
-
-        return json.dumps({'query': sql_query, 'results': formatted_results, 'count': len(formatted_results)}, indent=2)
-
-    except Exception as e:
-        return f'Error executing query: {str(e)}'
 
 
 # Create the mock database
@@ -288,34 +151,10 @@ def query_database(sql_query: str) -> str:
 print('=== Example 5: SQLite Database Query Tool - LLM-generated SQL queries with mock data ===')
 
 
-agent5 = create_react_agent(model=llm, tools=[query_database])
-# Count number of employees
-result8 = agent5.invoke({
-    'messages': [{'role': 'user', 'content': 'count the number of employees in the company database'}]
-})
-print('=== Example 5: Count Employees - Database Query ===')
-print(result8['messages'][-1].content)
-print()
+# %%
 
 
-result8 = agent5.invoke({
-    'messages': [
-        {'role': 'user', 'content': 'Find all employees in the Engineering department with a salary above 90000'}
-    ]
-})
-print(result8['messages'][-1].content)
-print()
 # %%
 # Test complex database query
-print('=== Example 5: Complex Database Query - SQL Analysis ===')
-agent5b = create_react_agent(model=llm, tools=[query_database])
-result9 = agent5b.invoke({
-    'messages': [
-        {
-            'role': 'user',
-            'content': "What's the average salary in each department? Show the results sorted by average salary descending.",
-        }
-    ]
-})
-print(result9['messages'][-1].content)
+
 # %%
