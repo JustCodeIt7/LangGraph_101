@@ -21,7 +21,11 @@
       "**/.junie": true,
       ".junie": true,
       "**/.continue": true,
-      ".continue": true
+      ".continue": true,
+      "**/.github": true,
+      "**/.kilocode": true,
+      ".kilocode": true,
+      "**/.pytest_cache": true
     },
     "explorerExclude.backup": {},
     "python.testing.unittestArgs": [
