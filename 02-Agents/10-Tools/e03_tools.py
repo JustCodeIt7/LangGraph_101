@@ -11,12 +11,12 @@ This file demonstrates five essential LangGraph tool patterns:
 
 from langchain_core.tools import tool
 from langgraph.prebuilt import create_react_agent
-from langchain.chat_models import init_chat_model
 import json
 import os
 from datetime import datetime
 from rich import print
 from langchain_litellm import ChatLiteLLM
+from langchain_ollama import ChatOllama
 import sqlite3
 from utils import create_mock_database
 import pathlib
@@ -27,20 +27,22 @@ load_dotenv()
 
 api_key = os.getenv('OPENROUTER_API_KEY')
 
-
 # change working directory to the current file's directory
 pathlib.Path(__file__).parent.resolve()
 os.chdir(pathlib.Path(__file__).parent.resolve())
 
-# Initialize the LLM
-# llm = init_chat_model(model='llama3.2', model_provider='ollama', temperature=0, api_base='http://eos.local:11434')
-# llm = init_chat_model(model='ollama:phi4-mini', temperature=0.1, api_base='http://eos.local:11434')
-llm = init_chat_model(
-    model='openai:mistralai/mistral-nemo',
-    # model_provider='openai',
+# # Initialize the LLM using ChatLiteLLM
+llm = ChatLiteLLM(
+    model='openai/google/gemini-2.5-flash-lite-preview-06-17',
     temperature=0.1,
     api_base='https://openrouter.ai/api/v1',
     api_key=api_key,
+)
+llm = ChatOllama(
+    model='phi4-mini',
+    temperature=0.1,
+    api_base='http://eos.local:11434',
+    streaming=False,
 )
 # %%
 # Example 1: Weather Tool with structured response
