@@ -1,10 +1,11 @@
 """
-Example 3: Basic LangGraph Tools - Four Practical Examples
-This file demonstrates four essential LangGraph tool patterns:
+Example 3: Basic LangGraph Tools - Five Practical Examples
+This file demonstrates five essential LangGraph tool patterns:
 1. Weather Tool - Simulates API calls with structured data
 2. File Operations Tool - Shows file system interactions
 3. Stock Price Tool - Real-time financial data with yfinance
 4. Math Tools - Chained calculations showing tool interoperability
+5. SQLite Database Query Tool - LLM-generated SQL queries with mock data
 """
 
 from langchain_core.tools import tool
@@ -15,6 +16,7 @@ import os
 from datetime import datetime
 from rich import print
 from langchain_litellm import ChatLiteLLM
+import sqlite3
 
 # Initialize the LLM
 # llm = init_chat_model(model='llama3.2', model_provider='ollama', temperature=0, api_base='http://eos.local:11434')
@@ -141,8 +143,81 @@ def calculate_stock_value(shares: float, price_per_share: float) -> str:
         return f'Error calculating stock value: {str(e)}'
 
 
+# Example 5: SQLite Database Query Tool
+def create_mock_database():
+    """Create a mock SQLite database with fake employee data for testing."""
+    conn = sqlite3.connect('company.db')
+    cursor = conn.cursor()
+    
+    # Create employees table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS employees (
+            id INTEGER PRIMARY KEY,
+            name TEXT NOT NULL,
+            department TEXT NOT NULL,
+            salary REAL NOT NULL,
+            hire_date TEXT NOT NULL
+        )
+    ''')
+    
+    # Insert mock data
+    employees = [
+        (1, 'Alice Johnson', 'Engineering', 95000, '2020-01-15'),
+        (2, 'Bob Smith', 'Marketing', 75000, '2019-03-22'),
+        (3, 'Carol Davis', 'Engineering', 105000, '2018-07-10'),
+        (4, 'David Wilson', 'Sales', 65000, '2021-05-30'),
+        (5, 'Eve Brown', 'Marketing', 80000, '2020-11-12'),
+        (6, 'Frank Miller', 'Engineering', 92000, '2019-09-05'),
+        (7, 'Grace Lee', 'HR', 70000, '2021-02-18'),
+        (8, 'Henry Taylor', 'Sales', 72000, '2020-08-24')
+    ]
+    
+    cursor.executemany('INSERT OR REPLACE INTO employees VALUES (?, ?, ?, ?, ?)', employees)
+    conn.commit()
+    conn.close()
+
+@tool
+def query_database(sql_query: str) -> str:
+    """Execute a SQL query on the company database and return the results as JSON.
+    
+    Args:
+        sql_query: The SQL query to execute (SELECT statements only for safety)
+    """
+    try:
+        # Security check - only allow SELECT statements
+        if not sql_query.strip().upper().startswith('SELECT'):
+            return "Error: Only SELECT queries are allowed for security reasons."
+        
+        conn = sqlite3.connect('company.db')
+        cursor = conn.cursor()
+        
+        # Execute the query
+        cursor.execute(sql_query)
+        
+        # Get column names
+        columns = [description[0] for description in cursor.description]
+        
+        # Get results
+        results = cursor.fetchall()
+        conn.close()
+        
+        # Format as list of dictionaries
+        formatted_results = [dict(zip(columns, row)) for row in results]
+        
+        return json.dumps({
+            "query": sql_query,
+            "results": formatted_results,
+            "count": len(formatted_results)
+        }, indent=2)
+        
+    except Exception as e:
+        return f"Error executing query: {str(e)}"
+
+# Create the mock database
+create_mock_database()
+
 # Create agent with all tools
-tools = [get_weather, save_note, get_stock_price, add_numbers, multiply_numbers, calculate_stock_value]
+tools = [get_weather, save_note, get_stock_price, add_numbers, multiply_numbers, calculate_stock_value, query_database]
 agent = create_react_agent(model=llm, tools=tools)
 # agent = ChatLiteLLM(model='ollama/llama3.2', api_base='http://eos.local:11434', temperature=0, tools=tools)
 
@@ -211,3 +286,19 @@ result7 = agent.invoke({
     ]
 })
 print(result7['messages'][-1].content)
+print()
+
+# Test Example 5: Database query tool
+print("=== Example 5: Database Query Tool ===")
+result8 = agent.invoke({
+    "messages": [{"role": "user", "content": "Find all employees in the Engineering department with a salary above 90000"}]
+})
+print(result8['messages'][-1].content)
+print()
+
+# Test complex database query
+print("=== Complex Database Query ===")
+result9 = agent.invoke({
+    "messages": [{"role": "user", "content": "What's the average salary in each department? Show the results sorted by average salary descending."}]
+})
+print(result9['messages'][-1].content)
