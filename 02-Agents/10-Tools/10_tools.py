@@ -75,7 +75,7 @@ print()
 
 
 # %%
-# Example 2: File operations tool
+# ############### Example 2: File Operations Tool - File system interactions ###############
 @tool
 def save_note(filename: str, content: str) -> str:
     """
@@ -114,7 +114,7 @@ print()
 
 
 # %%
-# Example 3: Stock price tool using yfinance
+# ############### Example 3: Stock Price Tool - Real-time financial data with yfinance ###############
 @tool
 def get_stock_price(ticker: str) -> str:
     """Get current stock price and basic information for a given ticker symbol.
@@ -180,7 +180,7 @@ print()
 
 
 # %%
-# Example 4: Math tools for chained calculations
+# ############### Example 4: Math Tools - Chained calculations showing tool interoperability ###############
 @tool
 def add_numbers(a: float, b: float) -> float:
     """Add two numbers together.
@@ -247,7 +247,7 @@ print()
 
 
 # %%
-# Example 5: SQLite Database Query Tool
+# ############### Example 5: SQLite Database Query Tool - LLM-generated SQL queries with mock data ###############
 
 @tool
 def query_database(sql_query: str) -> str:
