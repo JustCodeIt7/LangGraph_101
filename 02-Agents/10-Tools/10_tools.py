@@ -48,7 +48,7 @@ llm = ChatLiteLLM(
 #     streaming=False,
 # )
 # %%
-# Example 1: Weather Tool with structured response
+# ############### Example 1: Weather Tool with structured response ###############
 @tool
 def get_weather(location: str) -> str:
     """Get current weather information for a given location.
@@ -65,7 +65,7 @@ def get_weather(location: str) -> str:
         "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M")
     }
     return json.dumps(weather_data, indent=2)
-
+# %%
 # Test Example 1: Weather query
 print('=== Example 1: Weather Tool ===')
 agent1 = create_react_agent(model=llm, tools=[get_weather])
@@ -97,7 +97,7 @@ def save_note(filename: str, content: str) -> str:
         return f"Note saved successfully to {filepath}"
     except Exception as e:
         return f"Error saving note: {str(e)}"
-
+# %%
 # Test Example 2: File operation
 print('=== Example 2: File Operations Tool ===')
 agent2 = create_react_agent(model=llm, tools=[save_note])
@@ -156,14 +156,14 @@ def get_stock_price(ticker: str) -> str:
         return "Error: yfinance package not installed. Run: pip install yfinance"
     except Exception as e:
         return f"Error fetching stock data: {str(e)}"
-
+# %%
 # Test Example 3: Stock price tool
 print('=== Example 3: Stock Price Tool ===')
 agent3 = create_react_agent(model=llm, tools=[get_stock_price])
 result4 = agent3.invoke({'messages': [{'role': 'user', 'content': "What's the current price of Apple stock?"}]})
 print(result4['messages'][-1].content)
 print()
-
+# %%
 # Test all tools together: Stock + Weather + File
 print('=== All Tools Combined ===')
 agent3b = create_react_agent(model=llm, tools=[get_stock_price, get_weather, save_note])
@@ -216,7 +216,7 @@ def calculate_stock_value(shares: float, price_per_share: float) -> str:
         return f'Total stock value: ${total_value:.2f} ({shares} shares at ${price_per_share:.2f} per share)'
     except Exception as e:
         return f'Error calculating stock value: {str(e)}'
-
+# %%
 # Test Example 4: Chained math operations
 print('=== Example 4: Chained Math Tools ===')
 agent4 = create_react_agent(model=llm, tools=[get_stock_price, calculate_stock_value])
@@ -230,7 +230,7 @@ result6 = agent4.invoke({
 })
 print(result6['messages'][-1].content)
 print()
-
+# %%
 # Test complex chained calculation
 print('=== Complex Chained Calculation ===')
 agent4b = create_react_agent(model=llm, tools=[get_stock_price, calculate_stock_value, add_numbers, multiply_numbers])
@@ -288,7 +288,7 @@ def query_database(sql_query: str) -> str:
 
 # Create the mock database
 # create_mock_database()
-
+# %%
 # Test Example 5: Database query tool
 print('=== Example 5: Database Query Tool ===')
 
@@ -310,7 +310,7 @@ result8 = agent5.invoke({
 })
 print(result8['messages'][-1].content)
 print()
-
+# %%
 # Test complex database query
 print('=== Complex Database Query ===')
 agent5b = create_react_agent(model=llm, tools=[query_database])
