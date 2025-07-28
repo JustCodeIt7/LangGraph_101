@@ -32,18 +32,21 @@ pathlib.Path(__file__).parent.resolve()
 os.chdir(pathlib.Path(__file__).parent.resolve())
 
 # # Initialize the LLM using ChatLiteLLM
+model_name = 'google/gemini-2.0-flash-001'
+# model_name = 'meta-llama/llama-3.2-3b-instruct'
 llm = ChatLiteLLM(
-    model='openai/google/gemini-2.5-flash-lite-preview-06-17',
+    model=f'openrouter/{model_name}',
     temperature=0.1,
     api_base='https://openrouter.ai/api/v1',
-    api_key=api_key,
+    # api_key=api_key,
+    openrouter_api_key=api_key,
 )
-llm = ChatOllama(
-    model='phi4-mini',
-    temperature=0.1,
-    api_base='http://eos.local:11434',
-    streaming=False,
-)
+# llm = ChatOllama(
+#     model='phi4-mini',
+#     temperature=0.1,
+#     api_base='http://eos.local:11434',
+#     streaming=False,
+# )
 # %%
 # Example 1: Weather Tool with structured response
 @tool
@@ -288,7 +291,18 @@ def query_database(sql_query: str) -> str:
 
 # Test Example 5: Database query tool
 print('=== Example 5: Database Query Tool ===')
+
+
 agent5 = create_react_agent(model=llm, tools=[query_database])
+# Count number of employees
+result8 = agent5.invoke({
+    'messages': [{'role': 'user', 'content': 'count the number of employees in the company database'}]
+})
+print('=== Count Employees ===')
+print(result8['messages'][-1].content)
+print()
+
+
 result8 = agent5.invoke({
     'messages': [
         {'role': 'user', 'content': 'Find all employees in the Engineering department with a salary above 90000'}
