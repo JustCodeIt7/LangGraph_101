@@ -6,7 +6,7 @@ Welcome to LangGraph 101, a hands-on tutorial series designed to help you learn 
 
 ## 📚 About This Repository
 
-This repository offers a structured learning path from basic concepts to advanced applications, featuring code examples, detailed tutorials, and complete applications. Whether you're new to LangGraph or looking to deepen your expertise, this resource will guide you through effective LangGraph implementation.
+This repository offers a structured learning path from basic concepts to advanced applications, featuring code examples, detailed tutorials, and full applications. Whether you're new to LangGraph or looking to deepen your expertise, this resource will guide you through effective LangGraph implementation.
 
 ---
 
