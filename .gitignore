@@ -204,3 +204,26 @@ GEMINI.md
 .continue/
 
 !.env.vault
+
+# PyPI configuration file
+.pypirc
+MCP_101/outline
+.DS_Store
+archive/
+Archive/Reflex_101
+# ignore all files with name copy at the end
+*copy.*
+# ignore all files with name copy at the end with space and then any number e.g. copy 1, copy 2, etc.
+*copy [0-9]*.*
+Plotly_Dash_Dashboards/01-Plotly_Basics_Charts/11-Table/archive
+Plotly_Dash_Dashboards/01-Plotly_Basics_Charts/12-Sankey_Diagram/archive
+.claude/
+.kilocode/
+.roo/
+.continue/
+.clinerules
+.aiignore
+# ignore any starting with a dot
+.*/
+# Except for this one
+!/.github/
