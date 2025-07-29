@@ -20,7 +20,8 @@ api_key = os.getenv('OPENROUTER_API_KEY')
 # MODEL_PROVIDER = 'openrouter'  # or 'ollama' if using Ollama
 # MODEL_NAME = 'google/gemini-2.5-flash-lite'
 MODEL_PROVIDER = 'ollama'  # or 'ollama' if using Ollama
-MODEL_NAME = 'llama3.2'
+MODEL_NAME = 'llama3.2:1b'
+# MODEL_NAME = 'phi4-mini'
 BASE_URL = OLLAMA_BASE_URL
 # get env OLLAMA_BASE_URL from environment variables or config
 
@@ -140,22 +141,15 @@ def create_llm(model_name: str, temperature: float = 0.0, tags: List[str] = None
         model=f'{MODEL_PROVIDER}/{model_name}',
         temperature=temperature,
         api_base=BASE_URL,
-        openrouter_api_key=api_key,
+        # openrouter_api_key=api_key,
     )
     if tags:
         llm = llm.with_config(tags=tags)
     return llm.bind_tools(all_tools)
 
 
-# Instantiate base and final LLMs
+# Instantiate base LLM
 base_llm = create_llm(MODEL_NAME, temperature=0.1)
-# Create final LLM without tool binding to avoid callback issues
-final_llm = ChatLiteLLM(
-    model=f'{MODEL_PROVIDER}/{MODEL_NAME}',
-    temperature=0.1,
-    api_base=BASE_URL,
-    openrouter_api_key=api_key,
-)
 
 tool_node = ToolNode(tools=all_tools)
 
@@ -163,13 +157,13 @@ tool_node = ToolNode(tools=all_tools)
 # ----------------------------------
 # Graph Node Functions
 # ----------------------------------
-def should_route(state: MessagesState) -> Literal['tools', 'final']:
+def should_route(state: MessagesState) -> Literal['tools', 'respond']:
     """Decide whether to invoke tools or finish the conversation."""
     last = state['messages'][-1]
     # Limit the number of tool calls to prevent infinite loops
     tool_call_count = sum(bool(hasattr(msg, 'tool_calls') and msg.tool_calls) for msg in state['messages'])
 
-    return 'tools' if last.tool_calls and tool_call_count < 5 else 'final'
+    return 'tools' if last.tool_calls and tool_call_count < 5 else 'respond'
 
 
 def call_base_llm(state: MessagesState) -> Dict[str, List[BaseMessage]]:
@@ -178,10 +172,10 @@ def call_base_llm(state: MessagesState) -> Dict[str, List[BaseMessage]]:
     return {'messages': [response]}
 
 
-def call_final_llm(state: MessagesState) -> Dict[str, List[BaseMessage]]:
-    """Invoke the final LLM to rewrite the last message."""
+def call_respond_llm(state: MessagesState) -> Dict[str, List[BaseMessage]]:
+    """Invoke the base LLM to rewrite the last message in Al Roker's voice."""
     last = state['messages'][-1]
-    rewritten = final_llm.invoke([
+    rewritten = base_llm.invoke([
         SystemMessage(content='Rewrite this in the voice of Al Roker.'),
         HumanMessage(content=last.content),
     ])
@@ -196,12 +190,12 @@ def build_state_graph() -> StateGraph:
     builder = StateGraph(MessagesState)
     builder.add_node('agent', call_base_llm)
     builder.add_node('tools', tool_node)
-    builder.add_node('final', call_final_llm)
+    builder.add_node('respond', call_respond_llm)
 
     builder.add_edge(START, 'agent')
     builder.add_conditional_edges('agent', should_route)
     builder.add_edge('tools', 'agent')
-    builder.add_edge('final', END)
+    builder.add_edge('respond', END)
 
     # Compile with recursion limit
     g = builder.compile(checkpointer=None)
@@ -228,8 +222,8 @@ async def on_message(msg: cl.Message):
             {'messages': history},
             config={'configurable': {'thread_id': thread_id}, 'recursion_limit': 50},
         ):
-            if 'final' in chunk and chunk['final'].get('messages'):
-                final_message = chunk['final']['messages'][-1]
+            if 'respond' in chunk and chunk['respond'].get('messages'):
+                final_message = chunk['respond']['messages'][-1]
                 if hasattr(final_message, 'content') and final_message.content:
                     await reply.stream_token(final_message.content)
     except Exception as e:
