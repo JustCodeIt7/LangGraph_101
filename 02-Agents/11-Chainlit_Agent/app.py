@@ -17,7 +17,7 @@ load_dotenv()
 OLLAMA_BASE_URL = os.getenv('OLLAMA_BASE_URL')
 
 MODEL_NAME = 'qwen3:1.7b'
-
+MODEL_NAME = 'llama3.2'
 
 # ----------------------------------
 # Tool Definition
@@ -129,7 +129,7 @@ distinctive voice."""
 
 def create_llm(model_name: str, temperature: float = 0.1) -> ChatOllama:
     """Initialize and configure a ChatOllama instance with system prompt."""
-    llm = ChatOllama(model=model_name, base_url=OLLAMA_BASE_URL, temperature=temperature)
+    llm = ChatOllama(model=model_name, base_url=OLLAMA_BASE_URL, temperature=temperature, streaming=True)
     return llm.bind_tools(all_tools)
 
 
