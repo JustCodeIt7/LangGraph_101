@@ -17,14 +17,12 @@ from langchain_litellm import ChatLiteLLM
 load_dotenv()
 OLLAMA_BASE_URL = os.getenv('OLLAMA_BASE_URL')
 api_key = os.getenv('OPENROUTER_API_KEY')
-MODEL_PROVIDER = 'openrouter'  # or 'ollama' if using Ollama
-MODEL_NAME = 'google/gemini-2.5-flash-lite'
+# MODEL_PROVIDER = 'openrouter'  # or 'ollama' if using Ollama
+# MODEL_NAME = 'google/gemini-2.5-flash-lite'
 MODEL_PROVIDER = 'ollama'  # or 'ollama' if using Ollama
 MODEL_NAME = 'llama3.2'
-FINETUNE_MODEL_NAME = 'llama3.2'
 BASE_URL = OLLAMA_BASE_URL
 # get env OLLAMA_BASE_URL from environment variables or config
-OLLAMA_BASE_URL = os.getenv('OLLAMA_BASE_URL')
 
 # ----------------------------------
 # Tool Definition
@@ -153,7 +151,7 @@ def create_llm(model_name: str, temperature: float = 0.0, tags: List[str] = None
 base_llm = create_llm(MODEL_NAME, temperature=0.1)
 # Create final LLM without tool binding to avoid callback issues
 final_llm = ChatLiteLLM(
-    model=f'{MODEL_PROVIDER}/{FINETUNE_MODEL_NAME}',
+    model=f'{MODEL_PROVIDER}/{MODEL_NAME}',
     temperature=0.1,
     api_base=BASE_URL,
     openrouter_api_key=api_key,
