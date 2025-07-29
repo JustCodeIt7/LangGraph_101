@@ -12,18 +12,14 @@ from dotenv import load_dotenv
 import os
 from pygooglenews import GoogleNews
 import yfinance
-from langchain_litellm import ChatLiteLLM
 
 load_dotenv()
 OLLAMA_BASE_URL = os.getenv('OLLAMA_BASE_URL')
-api_key = os.getenv('OPENROUTER_API_KEY')
-# MODEL_PROVIDER = 'openrouter'  # or 'ollama' if using Ollama
-# MODEL_NAME = 'google/gemini-2.5-flash-lite'
-MODEL_PROVIDER = 'ollama'  # or 'ollama' if using Ollama
-MODEL_NAME = 'llama3.2:1b'
-# MODEL_NAME = 'phi4-mini'
-BASE_URL = OLLAMA_BASE_URL
+
+MODEL_NAME = 'qwen3:1.7b'
+FINETUNE_MODEL_NAME = 'qwen3:1.7b'
 # get env OLLAMA_BASE_URL from environment variables or config
+
 
 # ----------------------------------
 # Tool Definition
@@ -135,21 +131,18 @@ def search_recent_news(query: str, hours: int = 1) -> str:
 all_tools = [get_top_news, get_topic_headlines, get_geo_headlines, search_news, search_recent_news]
 
 
-def create_llm(model_name: str, temperature: float = 0.0, tags: List[str] = None) -> ChatLiteLLM:
-    """Initialize and configure a ChatLiteLLM instance."""
-    llm = ChatLiteLLM(
-        model=f'{MODEL_PROVIDER}/{model_name}',
-        temperature=temperature,
-        api_base=BASE_URL,
-        # openrouter_api_key=api_key,
-    )
+def create_llm(model_name: str, temperature: float = 0.0, tags: List[str] = None) -> ChatOllama:
+    """Initialize and configure a ChatOllama instance."""
+    llm = ChatOllama(model=model_name, base_url=OLLAMA_BASE_URL, temperature=temperature)
     if tags:
         llm = llm.with_config(tags=tags)
     return llm.bind_tools(all_tools)
 
 
-# Instantiate base LLM
+# Instantiate base and final LLMs
 base_llm = create_llm(MODEL_NAME, temperature=0.1)
+# Create final LLM without tool binding to avoid callback issues
+final_llm = ChatOllama(model=FINETUNE_MODEL_NAME, base_url=OLLAMA_BASE_URL, temperature=0.1)
 
 tool_node = ToolNode(tools=all_tools)
 
@@ -157,13 +150,13 @@ tool_node = ToolNode(tools=all_tools)
 # ----------------------------------
 # Graph Node Functions
 # ----------------------------------
-def should_route(state: MessagesState) -> Literal['tools', 'respond']:
+def should_route(state: MessagesState) -> Literal['tools', 'final']:
     """Decide whether to invoke tools or finish the conversation."""
     last = state['messages'][-1]
     # Limit the number of tool calls to prevent infinite loops
     tool_call_count = sum(bool(hasattr(msg, 'tool_calls') and msg.tool_calls) for msg in state['messages'])
 
-    return 'tools' if last.tool_calls and tool_call_count < 5 else 'respond'
+    return 'tools' if last.tool_calls and tool_call_count < 5 else 'final'
 
 
 def call_base_llm(state: MessagesState) -> Dict[str, List[BaseMessage]]:
@@ -172,10 +165,10 @@ def call_base_llm(state: MessagesState) -> Dict[str, List[BaseMessage]]:
     return {'messages': [response]}
 
 
-def call_respond_llm(state: MessagesState) -> Dict[str, List[BaseMessage]]:
-    """Invoke the base LLM to rewrite the last message in Al Roker's voice."""
+def call_final_llm(state: MessagesState) -> Dict[str, List[BaseMessage]]:
+    """Invoke the final LLM to rewrite the last message."""
     last = state['messages'][-1]
-    rewritten = base_llm.invoke([
+    rewritten = final_llm.invoke([
         SystemMessage(content='Rewrite this in the voice of Al Roker.'),
         HumanMessage(content=last.content),
     ])
@@ -190,12 +183,12 @@ def build_state_graph() -> StateGraph:
     builder = StateGraph(MessagesState)
     builder.add_node('agent', call_base_llm)
     builder.add_node('tools', tool_node)
-    builder.add_node('respond', call_respond_llm)
+    builder.add_node('final', call_final_llm)
 
     builder.add_edge(START, 'agent')
     builder.add_conditional_edges('agent', should_route)
     builder.add_edge('tools', 'agent')
-    builder.add_edge('respond', END)
+    builder.add_edge('final', END)
 
     # Compile with recursion limit
     g = builder.compile(checkpointer=None)
@@ -222,8 +215,8 @@ async def on_message(msg: cl.Message):
             {'messages': history},
             config={'configurable': {'thread_id': thread_id}, 'recursion_limit': 50},
         ):
-            if 'respond' in chunk and chunk['respond'].get('messages'):
-                final_message = chunk['respond']['messages'][-1]
+            if 'final' in chunk and chunk['final'].get('messages'):
+                final_message = chunk['final']['messages'][-1]
                 if hasattr(final_message, 'content') and final_message.content:
                     await reply.stream_token(final_message.content)
     except Exception as e:
