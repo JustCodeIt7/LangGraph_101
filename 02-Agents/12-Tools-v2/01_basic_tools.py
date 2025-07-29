@@ -12,7 +12,17 @@ from langgraph.prebuilt import create_react_agent
 from langchain_core.tools import tool
 from langchain.chat_models import init_chat_model
 from pydantic import BaseModel, Field
+from dotenv import load_dotenv
 
+# Load environment variables from .env file
+load_dotenv()
+from phoenix.otel import register
+
+# configure the Phoenix tracer
+tracer_provider = register(
+    project_name='langgraph_101',  # Default is 'default'
+    auto_instrument=True,  # Auto-instrument your app based on installed OI dependencies
+)
 # Set up the model - you can switch between OpenAI and Ollama
 MODEL_CHOICE = "openai"  # Change to "ollama" to use local model
 

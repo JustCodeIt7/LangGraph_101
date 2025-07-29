@@ -28,8 +28,8 @@ load_dotenv()
 api_key = os.getenv('OPENROUTER_API_KEY')
 
 # change working directory to the current file's directory
-pathlib.Path(__file__).parent.resolve()
-os.chdir(pathlib.Path(__file__).parent.resolve())
+# pathlib.Path(__file__).parent.resolve()
+# os.chdir(pathlib.Path(__file__).parent.resolve())
 
 # # Initialize the LLM using ChatLiteLLM
 model_name = 'google/gemini-2.0-flash-001'
