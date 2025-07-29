@@ -12,14 +12,19 @@ from dotenv import load_dotenv
 import os
 from pygooglenews import GoogleNews
 import yfinance
+from langchain_litellm import ChatLiteLLM
 
 load_dotenv()
 OLLAMA_BASE_URL = os.getenv('OLLAMA_BASE_URL')
-
-MODEL_NAME = 'qwen3:4b'
-FINETUNE_MODEL_NAME = 'qwen3:4b'
+api_key = os.getenv('OPENROUTER_API_KEY')
+MODEL_PROVIDER = 'openrouter'  # or 'ollama' if using Ollama
+MODEL_NAME = 'google/gemini-2.5-flash-lite'
+MODEL_PROVIDER = 'ollama'  # or 'ollama' if using Ollama
+MODEL_NAME = 'llama3.2'
+FINETUNE_MODEL_NAME = 'llama3.2'
+BASE_URL = OLLAMA_BASE_URL
 # get env OLLAMA_BASE_URL from environment variables or config
-
+OLLAMA_BASE_URL = os.getenv('OLLAMA_BASE_URL')
 
 # ----------------------------------
 # Tool Definition
@@ -131,9 +136,14 @@ def search_recent_news(query: str, hours: int = 1) -> str:
 all_tools = [get_top_news, get_topic_headlines, get_geo_headlines, search_news, search_recent_news]
 
 
-def create_llm(model_name: str, temperature: float = 0.0, tags: List[str] = None) -> ChatOllama:
-    """Initialize and configure a ChatOllama instance."""
-    llm = ChatOllama(model=model_name, base_url=OLLAMA_BASE_URL, temperature=temperature)
+def create_llm(model_name: str, temperature: float = 0.0, tags: List[str] = None) -> ChatLiteLLM:
+    """Initialize and configure a ChatLiteLLM instance."""
+    llm = ChatLiteLLM(
+        model=f'{MODEL_PROVIDER}/{model_name}',
+        temperature=temperature,
+        api_base=BASE_URL,
+        openrouter_api_key=api_key,
+    )
     if tags:
         llm = llm.with_config(tags=tags)
     return llm.bind_tools(all_tools)
@@ -142,7 +152,12 @@ def create_llm(model_name: str, temperature: float = 0.0, tags: List[str] = None
 # Instantiate base and final LLMs
 base_llm = create_llm(MODEL_NAME, temperature=0.1)
 # Create final LLM without tool binding to avoid callback issues
-final_llm = ChatOllama(model=FINETUNE_MODEL_NAME, base_url=OLLAMA_BASE_URL, temperature=0.1)
+final_llm = ChatLiteLLM(
+    model=f'{MODEL_PROVIDER}/{FINETUNE_MODEL_NAME}',
+    temperature=0.1,
+    api_base=BASE_URL,
+    openrouter_api_key=api_key,
+)
 
 tool_node = ToolNode(tools=all_tools)
 
