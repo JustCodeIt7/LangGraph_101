@@ -9,37 +9,40 @@ This file demonstrates five essential LangGraph tool patterns:
 5. SQLite Database Query Tool - LLM-generated SQL queries with mock data
 """
 
-from langchain_core.tools import tool
-from langgraph.prebuilt import create_react_agent
 import json
 import os
+import pathlib
+import sqlite3
 from datetime import datetime
-from rich import print
+
+from dotenv import load_dotenv
+from langchain_core.tools import tool
 from langchain_litellm import ChatLiteLLM
 from langchain_ollama import ChatOllama
-import sqlite3
+from langgraph.prebuilt import create_react_agent
+from rich import print
 from utils import create_mock_database
-import pathlib
-from dotenv import load_dotenv
-
-# Load environment variables from .env file
-load_dotenv()
-
-api_key = os.getenv('OPENROUTER_API_KEY')
 
 # change working directory to the current file's directory
 # pathlib.Path(__file__).parent.resolve()
 # os.chdir(pathlib.Path(__file__).parent.resolve())
 
+# Load environment variables from .env file
+load_dotenv()
+api_key = os.getenv('OPENROUTER_API_KEY') # get api key
+
+
 # # Initialize the LLM using ChatLiteLLM
 model_name = 'google/gemini-2.0-flash-001'
 # model_name = 'meta-llama/llama-3.2-3b-instruct'
-llm = ChatLiteLLM(
+
+llm = ChatLiteLLM(  # Using litellm to call openrouter
     model=f'openrouter/{model_name}',
     temperature=0.1,
     api_base='https://openrouter.ai/api/v1',
     openrouter_api_key=api_key,
 )
+
 
 # %%
 # ############### Example 1: Weather Tool with structured response ###############
@@ -54,7 +57,6 @@ def get_weather(location: str) -> str:
 
 # %%
 # Test Example 1: Weather query
-
 
 
 # %%
@@ -73,6 +75,7 @@ def save_note(filename: str, content: str) -> str:
 # %%
 # Test Example 2: File operation
 
+
 # %%
 # ############### Example 3: Stock Price Tool - Real-time financial data with yfinance ###############
 @tool
@@ -89,6 +92,7 @@ def get_stock_price(ticker: str) -> str:
 
 # %%
 # Test all tools together: Stock + Weather + File
+
 
 # %%
 # ############### Example 4: Math Tools - Chained calculations showing tool interoperability ###############
