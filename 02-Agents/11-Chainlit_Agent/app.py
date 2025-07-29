@@ -17,21 +17,11 @@ load_dotenv()
 OLLAMA_BASE_URL = os.getenv('OLLAMA_BASE_URL')
 
 MODEL_NAME = 'qwen3:1.7b'
-FINETUNE_MODEL_NAME = 'qwen3:1.7b'
-# get env OLLAMA_BASE_URL from environment variables or config
 
 
 # ----------------------------------
 # Tool Definition
 # ----------------------------------
-# @tool
-# def get_stock_price(symbol: str) -> str:
-#     """Fetch the current stock price for a given symbol."""
-#     stock = yfinance.Ticker(symbol)
-#     price = stock.history(period='1d')['Close'].iloc[-1]
-#     return f'The current price of {symbol} is ${price:.2f}'
-
-
 @tool
 def get_top_news() -> str:
     """Get the top news stories for the current country and language."""
@@ -130,50 +120,41 @@ def search_recent_news(query: str, hours: int = 1) -> str:
 # Define all available tools
 all_tools = [get_top_news, get_topic_headlines, get_geo_headlines, search_news, search_recent_news]
 
+# System prompt that includes Al Roker personality
+SYSTEM_PROMPT = """You are a helpful news assistant with the enthusiastic and warm personality of Al Roker. 
+Respond to user queries about news and current events in Al Roker's characteristic style - upbeat, friendly, 
+and engaging. Use tools when needed to fetch current news information, then present the results in your 
+distinctive voice."""
 
-def create_llm(model_name: str, temperature: float = 0.0, tags: List[str] = None) -> ChatOllama:
-    """Initialize and configure a ChatOllama instance."""
+
+def create_llm(model_name: str, temperature: float = 0.1) -> ChatOllama:
+    """Initialize and configure a ChatOllama instance with system prompt."""
     llm = ChatOllama(model=model_name, base_url=OLLAMA_BASE_URL, temperature=temperature)
-    if tags:
-        llm = llm.with_config(tags=tags)
     return llm.bind_tools(all_tools)
 
 
-# Instantiate base and final LLMs
-base_llm = create_llm(MODEL_NAME, temperature=0.1)
-# Create final LLM without tool binding to avoid callback issues
-final_llm = ChatOllama(model=FINETUNE_MODEL_NAME, base_url=OLLAMA_BASE_URL, temperature=0.1)
-
+# Single LLM instance
+base_llm = create_llm(MODEL_NAME)
 tool_node = ToolNode(tools=all_tools)
 
 
 # ----------------------------------
 # Graph Node Functions
 # ----------------------------------
-def should_route(state: MessagesState) -> Literal['tools', 'final']:
-    """Decide whether to invoke tools or finish the conversation."""
+def should_continue(state: MessagesState) -> Literal['tools', '__end__']:
+    """Decide whether to invoke tools or end the conversation."""
     last = state['messages'][-1]
     # Limit the number of tool calls to prevent infinite loops
     tool_call_count = sum(bool(hasattr(msg, 'tool_calls') and msg.tool_calls) for msg in state['messages'])
 
-    return 'tools' if last.tool_calls and tool_call_count < 5 else 'final'
+    return 'tools' if last.tool_calls and tool_call_count < 5 else '__end__'
 
 
-def call_base_llm(state: MessagesState) -> Dict[str, List[BaseMessage]]:
-    """Invoke the base LLM and append its response."""
-    response = base_llm.invoke(state['messages'])
+def call_llm(state: MessagesState) -> Dict[str, List[BaseMessage]]:
+    """Invoke the LLM with system prompt and append its response."""
+    messages = [SystemMessage(content=SYSTEM_PROMPT)] + state['messages']
+    response = base_llm.invoke(messages)
     return {'messages': [response]}
-
-
-def call_final_llm(state: MessagesState) -> Dict[str, List[BaseMessage]]:
-    """Invoke the final LLM to rewrite the last message."""
-    last = state['messages'][-1]
-    rewritten = final_llm.invoke([
-        SystemMessage(content='Rewrite this in the voice of Al Roker.'),
-        HumanMessage(content=last.content),
-    ])
-    rewritten.id = last.id  # preserve original ID
-    return {'messages': [rewritten]}
 
 
 # ----------------------------------
@@ -181,18 +162,15 @@ def call_final_llm(state: MessagesState) -> Dict[str, List[BaseMessage]]:
 # ----------------------------------
 def build_state_graph() -> StateGraph:
     builder = StateGraph(MessagesState)
-    builder.add_node('agent', call_base_llm)
+    builder.add_node('agent', call_llm)
     builder.add_node('tools', tool_node)
-    builder.add_node('final', call_final_llm)
 
     builder.add_edge(START, 'agent')
-    builder.add_conditional_edges('agent', should_route)
+    builder.add_conditional_edges('agent', should_continue)
     builder.add_edge('tools', 'agent')
-    builder.add_edge('final', END)
 
     # Compile with recursion limit
-    g = builder.compile(checkpointer=None)
-    return g
+    return builder.compile(checkpointer=None)
 
 
 agent_graph = build_state_graph()
@@ -205,7 +183,7 @@ print(agent_graph.get_graph().draw_ascii())
 # ----------------------------------
 @cl.on_message
 async def on_message(msg: cl.Message):
-    """Handle incoming messages and stream the final response."""
+    """Handle incoming messages and stream the response."""
     thread_id = cl.context.session.id
     history = [HumanMessage(content=msg.content)]
     reply = cl.Message(content='')
@@ -215,10 +193,11 @@ async def on_message(msg: cl.Message):
             {'messages': history},
             config={'configurable': {'thread_id': thread_id}, 'recursion_limit': 50},
         ):
-            if 'final' in chunk and chunk['final'].get('messages'):
-                final_message = chunk['final']['messages'][-1]
-                if hasattr(final_message, 'content') and final_message.content:
-                    await reply.stream_token(final_message.content)
+            # Stream content from agent responses
+            if 'agent' in chunk and chunk['agent'].get('messages'):
+                agent_message = chunk['agent']['messages'][-1]
+                if hasattr(agent_message, 'content') and agent_message.content:
+                    await reply.stream_token(agent_message.content)
     except Exception as e:
         await reply.stream_token(f'Error: {str(e)}')
 
