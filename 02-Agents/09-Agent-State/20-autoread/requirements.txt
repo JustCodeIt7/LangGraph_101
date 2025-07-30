@@ -1,0 +1,20 @@
+# Core dependencies
+langgraph>=0.1.0
+gitpython>=3.1.0
+pathlib2>=2.3.0
+pyyaml>=6.0.0
+toml>=0.10.0
+configparser>=5.0.0
+
+# Optional dependencies
+pygithub>=1.59.0
+chardet>=5.0.0
+
+# Development dependencies
+pytest>=7.0.0
+pytest-asyncio>=0.21.0
+pytest-mock>=3.10.0
+black>=23.0.0
+isort>=5.12.0
+mypy>=1.0.0
+pre-commit>=3.0.0

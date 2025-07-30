@@ -1,0 +1,3 @@
+# Requirements for simple Python project
+
+pytest>=7.0.0

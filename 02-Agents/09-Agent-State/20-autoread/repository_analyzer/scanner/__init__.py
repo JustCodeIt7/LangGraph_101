@@ -1,0 +1,1 @@
+"""Scanner module for repository analyzer - handles file system traversal and cataloging."""

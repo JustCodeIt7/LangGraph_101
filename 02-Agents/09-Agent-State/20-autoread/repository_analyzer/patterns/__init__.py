@@ -1,0 +1,1 @@
+"""Patterns module for repository analyzer - handles pattern detection and framework identification."""

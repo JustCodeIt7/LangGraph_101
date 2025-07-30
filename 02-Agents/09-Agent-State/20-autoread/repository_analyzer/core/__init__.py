@@ -1,0 +1,1 @@
+"""Core module for repository analyzer - contains data structures and configuration."""

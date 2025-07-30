@@ -1,0 +1,1 @@
+"""Git module for repository analyzer - handles cloning and authentication."""
