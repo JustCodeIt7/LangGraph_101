@@ -15,6 +15,8 @@ from ..patterns.frameworks import FrameworkDetector
 from ..analysis.relationships import RelationshipMapper
 from ..analysis.imports import ImportAnalyzer
 from ..analysis.config_parser import ConfigFileParser
+from ..input.handler import InputHandler
+from ..input.config import InputConfig
 
 
 class RepositoryAnalyzer:
@@ -36,6 +38,14 @@ class RepositoryAnalyzer:
         self.import_analyzer = ImportAnalyzer()
         self.config_parser = ConfigFileParser()
         
+        # Initialize InputHandler for unified input processing
+        input_config = InputConfig(
+            temp_dir=self.config.temp_dir,
+            timeout=300,
+            auto_cleanup=True
+        )
+        self.input_handler = InputHandler(input_config)
+        
         # Track temporary directories for cleanup
         self._temp_dirs = []
     
@@ -54,11 +64,13 @@ class RepositoryAnalyzer:
         """
         repo_path = None
         is_temp_repo = False
+        processed_input = None
         
         try:
-            # Clone or copy repository if needed
-            repo_path = self._prepare_repository(source)
-            is_temp_repo = repo_path.startswith(str(self.config.get_temp_dir()))
+            # Process input through InputHandler
+            processed_input = self.input_handler.process(source)
+            repo_path = processed_input.local_path
+            is_temp_repo = processed_input.is_temporary
             
             # Scan repository structure
             files, directories = self.file_scanner.scan_repository(repo_path)
@@ -105,8 +117,8 @@ class RepositoryAnalyzer:
             
         finally:
             # Clean up temporary repository if needed
-            if is_temp_repo and repo_path and self.config.respect_gitignore:
-                self.git_cloner.cleanup_temp_repository(repo_path)
+            if processed_input and processed_input.is_temporary:
+                self.input_handler.cleanup(processed_input)
     
     def _prepare_repository(self, source: str) -> str:
         """Prepare repository for analysis by cloning or copying.

@@ -4,6 +4,7 @@ A comprehensive Python library for analyzing GitHub repositories and local file 
 
 ## Features
 
+- **Unified Input Handling**: Process local paths and remote Git repositories through a single interface
 - **Repository Cloning**: Clone GitHub repositories locally for deep analysis with authentication support
 - **File System Analysis**: Recursive traversal with intelligent filtering including automatic .gitignore parsing
 - **Pattern Detection**: Identify common project structures (src/, lib/, docs/, tests/, config/, etc.)
@@ -34,14 +35,41 @@ pip install -e .
 ```python
 from repository_analyzer import RepositoryAnalyzer
 
-# Analyze a GitHub repository
+# Analyze a GitHub repository or local path
 analyzer = RepositoryAnalyzer()
 structure = analyzer.analyze("https://github.com/user/repo")
+# or
+structure = analyzer.analyze("/path/to/local/repository")
 
 # Access analysis results
 print(f"Project: {structure.metadata.name}")
 print(f"Language: {structure.metadata.primary_language}")
 print(f"Frameworks: {[f.name for f in structure.frameworks]}")
+```
+
+### Input Handler System
+
+The new InputHandler system provides unified processing for all input sources:
+
+```python
+from repository_analyzer.input.handler import InputHandler
+from repository_analyzer.input.config import InputConfig
+
+# Configure InputHandler
+config = InputConfig(
+    temp_dir="/tmp/repo_analyzer",
+    timeout=300,
+    enable_authentication=True
+)
+
+# Process any supported input type
+input_handler = InputHandler(config)
+processed_input = input_handler.process("https://github.com/user/repo.git")
+# or
+processed_input = input_handler.process("/local/path/to/repo")
+
+# Clean up temporary resources
+input_handler.cleanup(processed_input)
 ```
 
 ### LangGraph Integration
@@ -118,12 +146,13 @@ config = AnalysisConfig(
 
 The Repository Analyzer consists of several modular components:
 
-1. **Git Module**: Handles repository cloning with authentication
-2. **Scanner Module**: File system traversal and cataloging with filtering
-3. **Patterns Module**: General and framework-specific pattern detection
-4. **Analysis Module**: Relationship mapping and import analysis
-5. **README Generation Module**: Automated README creation from analysis results
-6. **LangGraph Module**: Integration nodes for agent workflows
+1. **Input Handler**: Unified input processing for local paths and remote repositories
+2. **Git Module**: Handles repository cloning with authentication
+3. **Scanner Module**: File system traversal and cataloging with filtering
+4. **Patterns Module**: General and framework-specific pattern detection
+5. **Analysis Module**: Relationship mapping and import analysis
+6. **README Generation Module**: Automated README creation from analysis results
+7. **LangGraph Module**: Integration nodes for agent workflows
 
 ## Development
 

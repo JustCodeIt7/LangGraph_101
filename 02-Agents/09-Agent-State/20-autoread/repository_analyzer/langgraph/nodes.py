@@ -5,6 +5,7 @@ from langgraph import StateGraph, END
 from ..core.analyzer import RepositoryAnalyzer
 from ..core.config import AnalysisConfig
 from ..core.data_structures import RepositoryStructure
+from ..input.handler import ProcessedInput
 
 
 class RepositoryAnalysisState(TypedDict):
@@ -12,6 +13,7 @@ class RepositoryAnalysisState(TypedDict):
     # Input
     repository_url: str
     local_path: Optional[str]
+    processed_input: Optional[ProcessedInput]
     
     # Configuration
     analysis_config: Optional[AnalysisConfig]
