@@ -156,10 +156,10 @@ class SimpleAgent:
                     tool_messages.append(ToolMessage(content=str(result), tool_call_id=tool_call['id']))
 
                     # Show a preview of the tool's output
-                    preview = str(result)[:100] + '...' if len(str(result)) > 100 else str(result)
+                    preview = f'{str(result)[:100]}...' if len(str(result)) > 100 else str(result)
                     print(f'✅ {preview}')
 
-                except Exception as e:
+                except Exception as e:  # type: ignore
                     # Handle tool execution errors
                     error_msg = f'Error: {e}' if str(e) else f'Unknown error with {tool_name}'
                     tool_messages.append(ToolMessage(content=error_msg, tool_call_id=tool_call['id']))

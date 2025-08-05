@@ -10,22 +10,23 @@ from langchain_community.tools import DuckDuckGoSearchRun
 import datetime
 from langchain_mcp_adapters.client import MultiServerMCPClient
 
-# Set up server parameters (update path to your math_server.py)
+################################ Configure MCP Server ################################
+# Define how to start the external MCP server process
 server_params = StdioServerParameters(
     command='python',
-    args=['math_server.py'],  # might need to adjust this path
+    args=['math_server.py'],  # Path to the server script
     env=None,
 )
 
-# Installing the MCP server fetch tool: pip install mcp-server-fetch
-server_params = StdioServerParameters(
-    command='python',
-    args=['-m', 'mcp_server_fetch'],  # might need to adjust this path
-    env=None,
-)
+# Example for installing the MCP server fetch tool: pip install mcp-server-fetch
+# server_params = StdioServerParameters(
+#     command='python',
+#     args=['-m', 'mcp_server_fetch'],
+#     env=None,
+# )
 
 
-# Define custom tools
+################################ Define Custom Local Tools ################################
 @tool
 def get_current_time() -> str:
     """Get the current date and time."""
@@ -43,50 +44,59 @@ def calculate_percentage(value: float, percentage: float) -> float:
     return (value * percentage) / 100
 
 
+################################ Main Agent Logic ################################
 async def main():
+    # Start the MCP server as a subprocess
     async with stdio_client(server_params) as (read, write):
+        # Establish a client session with the running server
         async with ClientSession(read, write) as session:
-            await session.initialize()  # Initialize connection
+            await session.initialize()  # Finalize the connection and handshake
 
-            # Load tools from the MCP server
+            # Load tools exposed by the remote MCP server
             mcp_tools = await load_mcp_tools(session)
-            print('MCP tools:', [tool.name for tool in mcp_tools])  # Should show ['add', 'multiply']
+            print('MCP tools:', [tool.name for tool in mcp_tools])
 
-            # Define additional custom tools
+            # Define additional tools available in this local script
             custom_tools = [
                 get_current_time,
                 calculate_percentage,
-                # DuckDuckGoSearchRun(),  # Uncomment if you want web search
+                # DuckDuckGoSearchRun(),  # Uncomment to enable web search
             ]
 
-            # Combine MCP tools with custom tools
+            # Combine remote and local tools into a single list for the agent
             all_tools = mcp_tools + custom_tools
             print('All available tools:', [tool.name for tool in all_tools])
 
-            # Set up the LLM and agent
-            llm = ChatOpenAI(model='gpt-4o', temperature=0)  # Replace with your key
-            # llm = ChatOllama(model='llama3.2', temperature=0)  # Or use Ollama model
+            # Configure the Large Language Model
+            llm = ChatOpenAI(model='gpt-4o', temperature=0)
+            # llm = ChatOllama(model='llama3.2', temperature=0)  # Or use a local Ollama model
+
+            # Create a ReAct agent that can use the combined toolset
             agent = create_react_agent(llm, all_tools)
 
-            # Test with multiple tools
-            # response = await agent.ainvoke({
-            #     'messages': [
-            #         {
-            #             'role': 'user',
-            #             'content': "What's the current time? Also calculate (3 + 5) * 12 and then find 15% of that result.",
-            #         }
-            #     ]
-            # })
+            # Send a complex, multi-tool query to the agent
             response = await agent.ainvoke({
                 'messages': [
                     {
                         'role': 'user',
-                        'content': 'fetch the website https://langchain-ai.github.io/langgraph/agents/mcp/ and summarize it',
+                        'content': "What's the current time? Also calculate (3 + 5) * 12 and then find 15% of that result.",
                     }
                 ]
             })
+            # Example query for the web fetch tool
+            # response = await agent.ainvoke({
+            #     'messages': [
+            #         {
+            #             'role': 'user',
+            #             'content': 'fetch the website https://langchain-ai.github.io/langgraph/agents/mcp/ and summarize it',
+            #         }
+            #     ]
+            # })
+
+            # Print the agent's final response
             print('Agent response:', response['messages'][-1].content)
 
 
+################################ Run the Application ################################
 if __name__ == '__main__':
     asyncio.run(main())
