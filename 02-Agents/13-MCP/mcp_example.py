@@ -13,8 +13,6 @@ import datetime
 server_params = StdioServerParameters(
     command='python',
     args=['math_server.py'],  # might need to adjust this path
-    transport='stdio',
-    definition='Math tools for calculations',
     env=None,
 )
 
