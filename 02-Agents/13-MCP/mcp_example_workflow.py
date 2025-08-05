@@ -27,8 +27,8 @@ def calculate(expression: str) -> str:
             return f'{expression} = {result}'
         else:
             return 'Invalid expression'
-    except:
-        return 'Calculation error'
+    except Exception as e:
+        return f'Calculation error: {e}'
 
 
 class SimpleAgent:
@@ -82,7 +82,7 @@ class SimpleAgent:
         for context in reversed(self.mcp_contexts):
             try:
                 await context.__aexit__(None, None, None)
-            except:
+            except Exception:
                 pass
 
     async def agent_node(self, state: AgentState) -> AgentState:
@@ -136,7 +136,7 @@ async def main():
 
         # Example questions
         await agent.ask("What's 15% of 96?")
-        await agent.ask('Fetch https://python.org and tell me what Python is')
+        await agent.ask('fetch the website https://langchain-ai.github.io/langgraph/ and summarize it')
 
     except Exception as e:
         print(f'❌ Error: {e}')
