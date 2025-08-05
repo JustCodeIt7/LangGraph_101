@@ -8,11 +8,19 @@ from langchain_ollama import ChatOllama
 from langchain_core.tools import tool
 from langchain_community.tools import DuckDuckGoSearchRun
 import datetime
+from langchain_mcp_adapters.client import MultiServerMCPClient
 
 # Set up server parameters (update path to your math_server.py)
 server_params = StdioServerParameters(
     command='python',
     args=['math_server.py'],  # might need to adjust this path
+    env=None,
+)
+
+# Installing the MCP server fetch tool: pip install mcp-server-fetch
+server_params = StdioServerParameters(
+    command='python',
+    args=['-m', 'mcp_server_fetch'],  # might need to adjust this path
     env=None,
 )
 
@@ -61,11 +69,19 @@ async def main():
             agent = create_react_agent(llm, all_tools)
 
             # Test with multiple tools
+            # response = await agent.ainvoke({
+            #     'messages': [
+            #         {
+            #             'role': 'user',
+            #             'content': "What's the current time? Also calculate (3 + 5) * 12 and then find 15% of that result.",
+            #         }
+            #     ]
+            # })
             response = await agent.ainvoke({
                 'messages': [
                     {
                         'role': 'user',
-                        'content': "What's the current time? Also calculate (3 + 5) * 12 and then find 15% of that result.",
+                        'content': 'fetch the website https://langchain-ai.github.io/langgraph/agents/mcp/ and summarize it',
                     }
                 ]
             })

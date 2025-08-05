@@ -74,7 +74,7 @@ def create_workflow_agent(llm, tools):
             return 'tools'
         return END
 
-    def call_model(state: WorkflowState):
+    def call_model(state: WorkflowState, prompt: ChatPromptTemplate, llm_with_tools):
         """Call the model with the current state."""
         # Format the prompt with available tool names
         tool_names = [tool.name for tool in tools]
