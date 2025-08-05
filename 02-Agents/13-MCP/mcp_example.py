@@ -1,34 +1,48 @@
 import asyncio
-from mcp import ClientSession, StdioServerParameters
-from mcp.client.stdio import stdio_client
-from langchain_mcp_adapters.tools import load_mcp_tools
+from langchain_mcp_adapters.client import MultiServerMCPClient
+from langchain_mcp_adapters.tools import load_mcp_tools  # Import this for explicit loading
 from langgraph.prebuilt import create_react_agent
-from langchain_openai import ChatOpenAI  # Or use another LLM like ChatGoogleGenerativeAI
+from langchain_openai import ChatOpenAI
 
-# Set up server parameters (update path to your math_server.py)
-server_params = StdioServerParameters(
-    command='python',
-    args=['math_server.py'],  # Replace with absolute path
-    env=None,
-)
+client = MultiServerMCPClient({
+    'math': {
+        'command': 'python',
+        'args': ['math_server.py'],  # Use FULL absolute path
+        'transport': 'stdio',
+    },
+    'weather': {
+        'url': 'http://localhost:8000/mcp',
+        'transport': 'streamable_http',  # Recommended in docs for reliability
+    },
+})
 
 
 async def main():
-    async with stdio_client(server_params) as (read, write):
-        async with ClientSession(read, write) as session:
-            await session.initialize()  # Initialize connection
+    all_tools = []  # Collect tools from all servers
 
-            # Load tools from the MCP server
-            tools = await load_mcp_tools(session)
-            print('Available tools:', [tool.name for tool in tools])  # Should show ['add', 'multiply']
+    # Explicitly load from math server
+    async with client.sessions('math') as math_session:
+        print('Math session initialized:', math_session.initialized)  # Debug: Check if session started
+        math_tools = await load_mcp_tools(math_session)
+        all_tools.extend(math_tools)
+        print('Math tools loaded:', [tool.name for tool in math_tools])
 
-            # Set up the LLM and agent
-            llm = ChatOpenAI(model='gpt-4o', temperature=0)  # Replace with your key
-            agent = create_react_agent(llm, tools)
+    # Explicitly load from weather server
+    async with client.sessions('weather') as weather_session:
+        print('Weather session initialized:', weather_session.initialized)
+        weather_tools = await load_mcp_tools(weather_session)
+        all_tools.extend(weather_tools)
+        print('Weather tools loaded:', [tool.name for tool in weather_tools])
 
-            # Invoke the agent with a query
-            response = await agent.ainvoke({'messages': [{'role': 'user', 'content': "What's (3 + 5) * 12?"}]})
-            print('Agent response:', response['messages'][-1].content)  # Example output: "The result is 96."
+    print('Available tools:', [tool.name for tool in all_tools])  # Should now list tools like ['add', 'get_weather']
+
+    llm = ChatOpenAI(model='gpt-4o', temperature=0)
+    agent = create_react_agent(llm, all_tools)
+
+    response = await agent.ainvoke({
+        'messages': [{'role': 'user', 'content': "What's the weather in NYC, then add 5 to 10?"}]
+    })
+    print('Agent response:', response['messages'][-1].content)  # Should now use tools properly
 
 
 if __name__ == '__main__':
