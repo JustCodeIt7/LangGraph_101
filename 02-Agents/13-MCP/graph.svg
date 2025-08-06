@@ -1,0 +1,115 @@
+<svg viewBox="0 0 800 600" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="800" height="600" fill="#f8f9fa"/>
+  
+  <!-- Title -->
+  <text x="400" y="30" text-anchor="middle" font-family="Arial, sans-serif" font-size="20" font-weight="bold" fill="#2c3e50">
+    LangGraph Agent Workflow
+  </text>
+  
+  <!-- Entry Point Indicator -->
+  <circle cx="100" cy="150" r="8" fill="#27ae60"/>
+  <text x="100" y="135" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#27ae60" font-weight="bold">
+    START
+  </text>
+  
+  <!-- Agent Node -->
+  <rect x="200" y="120" width="120" height="60" rx="10" fill="#3498db" stroke="#2980b9" stroke-width="2"/>
+  <text x="260" y="145" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="white">
+    agent
+  </text>
+  <text x="260" y="160" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="white">
+    (agent_node)
+  </text>
+  
+  <!-- Tools Node -->
+  <rect x="200" y="320" width="120" height="60" rx="10" fill="#e74c3c" stroke="#c0392b" stroke-width="2"/>
+  <text x="260" y="345" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="white">
+    tools
+  </text>
+  <text x="260" y="360" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="white">
+    (tools_node)
+  </text>
+  
+  <!-- END Node -->
+  <rect x="500" y="120" width="80" height="60" rx="10" fill="#95a5a6" stroke="#7f8c8d" stroke-width="2"/>
+  <text x="540" y="145" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="white">
+    END
+  </text>
+  <text x="540" y="160" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="white">
+    (terminal)
+  </text>
+  
+  <!-- Decision Diamond -->
+  <polygon points="400,120 440,150 400,180 360,150" fill="#f39c12" stroke="#e67e22" stroke-width="2"/>
+  <text x="400" y="155" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" font-weight="bold" fill="white">
+    should_continue
+  </text>
+  
+  <!-- Entry edge -->
+  <line x1="108" y1="150" x2="192" y2="150" stroke="#2c3e50" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <text x="150" y="145" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#2c3e50">
+    entry_point
+  </text>
+  
+  <!-- Agent to decision -->
+  <line x1="320" y1="150" x2="352" y2="150" stroke="#2c3e50" stroke-width="2" marker-end="url(#arrowhead)"/>
+  
+  <!-- Decision to END -->
+  <line x1="440" y1="150" x2="492" y2="150" stroke="#2c3e50" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <text x="466" y="145" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#2c3e50" font-weight="bold">
+    'end'
+  </text>
+  
+  <!-- Decision to Tools -->
+  <path d="M 400 180 Q 400 250 260 312" stroke="#2c3e50" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  <text x="330" y="250" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#2c3e50" font-weight="bold">
+    'continue'
+  </text>
+  
+  <!-- Tools back to Agent -->
+  <path d="M 200 350 Q 100 350 100 200 Q 100 150 192 150" stroke="#2c3e50" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  <text x="80" y="280" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#2c3e50" transform="rotate(-90 80 280)">
+    tools → agent
+  </text>
+  
+  <!-- Arrow marker definition -->
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2c3e50"/>
+    </marker>
+  </defs>
+  
+  <!-- Legend -->
+  <rect x="50" y="450" width="700" height="120" rx="5" fill="white" stroke="#bdc3c7" stroke-width="1"/>
+  <text x="60" y="470" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#2c3e50">
+    Workflow Components:
+  </text>
+  
+  <!-- Legend items -->
+  <rect x="60" y="485" width="15" height="15" fill="#3498db"/>
+  <text x="85" y="497" font-family="Arial, sans-serif" font-size="12" fill="#2c3e50">
+    Agent Node: Processes input and decides next action
+  </text>
+  
+  <rect x="60" y="510" width="15" height="15" fill="#e74c3c"/>
+  <text x="85" y="522" font-family="Arial, sans-serif" font-size="12" fill="#2c3e50">
+    Tools Node: Executes tool calls and returns results
+  </text>
+  
+  <polygon points="60,535 67,542 60,549 53,542" fill="#f39c12"/>
+  <text x="85" y="547" font-family="Arial, sans-serif" font-size="12" fill="#2c3e50">
+    Decision Point: Conditional routing based on should_continue()
+  </text>
+  
+  <!-- Configuration info -->
+  <text x="400" y="485" font-family="Arial, sans-serif" font-size="12" fill="#2c3e50">
+    <tspan font-weight="bold">LLM:</tspan> ChatOpenAI (gpt-4o, temperature=0)
+  </text>
+  <text x="400" y="505" font-family="Arial, sans-serif" font-size="12" fill="#2c3e50">
+    <tspan font-weight="bold">State:</tspan> AgentState with tool binding
+  </text>
+  <text x="400" y="525" font-family="Arial, sans-serif" font-size="12" fill="#2c3e50">
+    <tspan font-weight="bold">Flow:</tspan> Agent → Decision → Tools/End → Loop
+  </text>
+</svg>
