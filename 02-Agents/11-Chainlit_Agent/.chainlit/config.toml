@@ -13,7 +13,7 @@ session_timeout = 3600
 user_session_timeout = 1296000  # 15 days
 
 # Enable third parties caching (e.g., LangChain cache)
-cache = false
+cache = false 
 
 # Authorized origins
 allow_origins = ["*"]
@@ -23,7 +23,7 @@ allow_origins = ["*"]
 unsafe_allow_html = false
 
 # Process and display mathematical expressions. This can clash with "$" characters in messages.
-latex = false
+latex = true
 
 # Autoscroll new user messages at the top of the window
 user_message_autoscroll = true

@@ -14,6 +14,7 @@ from pygooglenews import GoogleNews
 import yfinance
 import pandas as pd
 import json
+
 # New imports for MCP integration
 import asyncio
 from mcp import ClientSession, StdioServerParameters
@@ -232,13 +233,11 @@ async def on_message(msg: cl.Message):
                     if 'agent' in chunk and chunk['agent'].get('messages'):
                         agent_message = chunk['agent']['messages'][-1]
                         if hasattr(agent_message, 'content') and agent_message.content:
-                            await reply.stream_token(agent_message.content)
+                            await reply.stream_token(f'\n\n[Agent message]\n {agent_message.content}')
 
-                        # Visibility: announce tool calls (name + args) decided by the agent
-                        tool_calls = getattr(agent_message, 'tool_calls', None) or getattr(
+                        if tool_calls := getattr(agent_message, 'tool_calls', None) or getattr(
                             agent_message, 'additional_kwargs', {}
-                        ).get('tool_calls')
-                        if tool_calls:
+                        ).get('tool_calls'):
                             for tc in tool_calls:
                                 name = tc.get('name') or (tc.get('function') or {}).get('name')
                                 raw_args = tc.get('args') or (tc.get('function') or {}).get('arguments')
@@ -247,15 +246,14 @@ async def on_message(msg: cl.Message):
                                 except Exception:
                                     args = raw_args
                                 # Trim long args for readability
-                                await reply.stream_token(f'\n\n[Tool call] {name} args: {str(args)[:500]}')
+                                await reply.stream_token(f'\n\n[Tool call]\n {name} args: {str(args)[:500]}')
 
                     # Visibility: stream tool results returned by the tools node
                     if 'tools' in chunk and chunk['tools'].get('messages'):
                         tool_msg = chunk['tools']['messages'][-1]
                         tool_name = getattr(tool_msg, 'name', '') or ''
-                        content = getattr(tool_msg, 'content', '')
-                        if content:
-                            await reply.stream_token(f'\n[Tool result] {tool_name}: {str(content)[:700]}')
+                        if content := getattr(tool_msg, 'content', ''):
+                            await reply.stream_token(f'\n[Tool result]\n {tool_name}: {str(content)[:700]}')
     except Exception as e:
         await reply.stream_token(f'Error: {str(e)}')
 
