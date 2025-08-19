@@ -28,6 +28,7 @@ openrouter_api_key = os.getenv('OPENROUTER_API_KEY')
 MODEL_NAME = 'qwen3:1.7b'
 MODEL_NAME = 'llama3.2'
 MODEL_NAME = 'openai/gpt-oss-120b'
+MODEL_NAME = 'openai/gpt-oss-20b'
 
 # Configure Yahoo Finance MCP server (ensure the server is installed, e.g., `pip install mcp-server-yfinance`)
 server_params = StdioServerParameters(
@@ -87,7 +88,7 @@ def search_recent_news(query: str, hours: int = 1) -> str:
 
 @tool
 def calculator(expression: str) -> str:
-    """Calculate a mathematical expression using a safe eval."""
+    """Calculate a mathematical expression using a safe eval. (e.g., 10 * 5)"""
     try:
         # Use a whitelist to prevent arbitrary code execution
         allowed_chars = set('0123456789+-*/.(). ')
@@ -103,7 +104,7 @@ def calculator(expression: str) -> str:
 # LLM Setup
 # ----------------------------------
 # Define local (non-MCP) tools
-local_tools = [get_topic_headlines, search_recent_news]
+local_tools = [get_topic_headlines, search_recent_news, calculator]
 
 # System prompt that includes Al Roker personality
 SYSTEM_PROMPT = """You are a helpful news assistant with the enthusiastic and warm personality of Al Roker. 
@@ -198,8 +199,14 @@ async def set_starters():
         # calc 10 shares of AAPL
         cl.Starter(
             label='Calculate 10 shares of AAPL',
-            message='What is the total cost of 10 shares of AAPL at the current price show your work?',
+            message='get the current price of AAPL and then calculate how much 10 shares of AAPL would cost at the current price.',
             icon='https://cdn.simpleicons.org/apple',
+        ),
+        # test calc tool
+        cl.Starter(
+            label='What is 10 * 5?',
+            message='Calculate 10 * 5',
+            icon='https://attic.sh/8v2lqhwii3ape4z4l23vg8s3rez9',
         ),
     ]
 
