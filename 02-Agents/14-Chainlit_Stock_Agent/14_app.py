@@ -15,7 +15,6 @@ import yfinance
 import pandas as pd
 import json
 
-# New imports for MCP integration
 import asyncio
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
@@ -30,18 +29,16 @@ MODEL_NAME = 'llama3.2'
 MODEL_NAME = 'openai/gpt-oss-120b'
 MODEL_NAME = 'openai/gpt-oss-20b'
 
-# Configure Yahoo Finance MCP server (ensure the server is installed, e.g., `pip install mcp-server-yfinance`)
+################################ MCP & Tool Configuration ################################
+# Configure the Yahoo Finance MCP server to run as a local subprocess
 server_params = StdioServerParameters(
     command='uvx',
-    args=['yfmcp@latest'],  # Alternative module names may be: mcp_server_yahoo_finance
+    args=['yfmcp@latest'],  # Specify the MCP server module to run
     env=None,
 )
 
-# ----------------------------------
-# Tool Definition
-# ----------------------------------
 
-
+################################ Local Tool Definitions ################################
 @tool
 def get_topic_headlines(topic: str) -> str:
     """Get news headlines for a specific topic.
@@ -51,12 +48,14 @@ def get_topic_headlines(topic: str) -> str:
     valid_topics = ['WORLD', 'NATION', 'BUSINESS', 'TECHNOLOGY', 'ENTERTAINMENT', 'SCIENCE', 'SPORTS', 'HEALTH']
     topic_upper = topic.upper()
 
+    # Validate the provided topic against the accepted list
     if topic_upper not in valid_topics:
         return f'Invalid topic. Please use one of: {", ".join(valid_topics)}'
 
     gn = GoogleNews(lang='en', country='US')
     headlines = gn.topic_headlines(topic_upper)
     articles = []
+    # Format the top 10 headlines for display
     articles.extend(f'• {entry.title}\n  {entry.link}' for entry in headlines['entries'][:10])
     return f'Headlines for {topic}:\n\n' + '\n\n'.join(articles)
 
@@ -69,16 +68,19 @@ def search_recent_news(query: str, hours: int = 1) -> str:
         query: Search terms
         hours: Number of hours to look back (1-24)
     """
+    # Ensure the hours argument is within the valid range
     if hours < 1 or hours > 24:
         return 'Hours must be between 1 and 24'
 
     gn = GoogleNews(lang='en', country='US')
+    # Search Google News with a time filter
     search_results = gn.search(query, when=f'{hours}h')
 
     if not search_results['entries']:
         return f'No recent news found for query: {query} in the last {hours} hours'
 
     articles = []
+    # Format the top 10 search results for display
     for entry in search_results['entries'][:10]:
         published = getattr(entry, 'published', 'Unknown date')
         articles.append(f'• {entry.title}\n  Published: {published}\n  {entry.link}')
@@ -90,7 +92,7 @@ def search_recent_news(query: str, hours: int = 1) -> str:
 def calculator(expression: str) -> str:
     """Calculate a mathematical expression using a safe eval. (e.g., 10 * 5)"""
     try:
-        # Use a whitelist to prevent arbitrary code execution
+        # Use a character whitelist to prevent arbitrary code execution
         allowed_chars = set('0123456789+-*/.(). ')
         if not expression or any(c not in allowed_chars for c in expression):
             return 'Invalid expression'
@@ -100,23 +102,23 @@ def calculator(expression: str) -> str:
         return f'Calculation error: {e}'
 
 
-# ----------------------------------
-# LLM Setup
-# ----------------------------------
-# Define local (non-MCP) tools
+################################ LLM & Prompt Configuration ################################
+# Define a list of tools that are available locally
 local_tools = [get_topic_headlines, search_recent_news, calculator]
 
-# System prompt that includes Al Roker personality
-SYSTEM_PROMPT = """You are a helpful news assistant with the enthusiastic and warm personality of Al Roker. 
-Respond to user queries about news and current events in Al Roker's characteristic style - upbeat, friendly, 
-and engaging. Use tools when needed to fetch current news information, then present the results in your 
+# System prompt to give the AI its personality and instructions
+SYSTEM_PROMPT = """You are a helpful news assistant with the enthusiastic and warm personality of Al Roker.
+Respond to user queries about news and current events in Al Roker's characteristic style - upbeat, friendly,
+and engaging. Use tools when needed to fetch current news information, then present the results in your
 distinctive voice."""
 
 
-def create_llm(model_name: str, temperature: float = 0.1) -> ChatOllama:
-    """Initialize and configure a Chat model (OpenRouter/OpenAI or Ollama) without binding tools."""
-    llm = ChatOllama(model=model_name, base_url=OLLAMA_BASE_URL, temperature=temperature, streaming=True)
-    # Base LLM via OpenRouter
+def create_llm(model_name: str, temperature: float = 0.1) -> ChatOpenAI:
+    """Initialize and configure a Chat model from OpenRouter or Ollama."""
+    # Example for Ollama (currently overridden by OpenRouter below)
+    # llm = ChatOllama(model=model_name, base_url=OLLAMA_BASE_URL, temperature=temperature, streaming=True)
+
+    # Initialize the LLM via OpenRouter
     llm = ChatOpenAI(
         model=MODEL_NAME,
         base_url=os.getenv('OPENROUTER_BASE_URL', 'https://openrouter.ai/api/v1'),
@@ -126,47 +128,47 @@ def create_llm(model_name: str, temperature: float = 0.1) -> ChatOllama:
     return llm
 
 
-# ----------------------------------
-# Graph Node Functions
-# ----------------------------------
-
-
+################################ LangGraph Agent Definition ################################
 def should_continue(state: MessagesState) -> Literal['tools', '__end__']:
-    """Decide whether to invoke tools or end the conversation."""
-    last = state['messages'][-1]
-    # Limit the number of tool calls to prevent infinite loops
+    """Determine whether to call tools or end the conversation."""
+    last_message = state['messages'][-1]
+    # Limit tool calls to 5 to prevent infinite loops
     tool_call_count = sum(bool(hasattr(msg, 'tool_calls') and msg.tool_calls) for msg in state['messages'])
 
-    return 'tools' if last.tool_calls and tool_call_count < 5 else '__end__'
+    # If the last message has tool calls and we haven't exceeded the limit, continue.
+    return 'tools' if last_message.tool_calls and tool_call_count < 5 else '__end__'
 
 
 def build_state_graph_with(llm, tools) -> StateGraph:
-    """Build a StateGraph using the provided LLM and tools (including MCP tools)."""
+    """Build a StateGraph with the provided LLM and a combined list of tools."""
     builder = StateGraph(MessagesState)
 
+    # Define the agent node that calls the LLM
     def call_llm_node(state: MessagesState) -> Dict[str, List[BaseMessage]]:
+        # Prepend the system prompt to the conversation history
         messages = [SystemMessage(content=SYSTEM_PROMPT)] + state['messages']
+        # Make the LLM aware of the available tools
         response = llm.bind_tools(tools).invoke(messages)
         return {'messages': [response]}
 
+    # Define the node that executes tool calls
     tool_node = ToolNode(tools=tools)
 
+    # Add nodes to the graph
     builder.add_node('agent', call_llm_node)
     builder.add_node('tools', tool_node)
 
+    # Define the graph's control flow
     builder.add_edge(START, 'agent')
     builder.add_conditional_edges('agent', should_continue)
     builder.add_edge('tools', 'agent')
 
+    # Compile the graph into a runnable object
     return builder.compile(checkpointer=None)
 
 
-# ----------------------------------
-# Chainlit Event Handler
-# ----------------------------------
-
-
-# Starter Prompts
+################################ Chainlit UI & Event Handlers ################################
+# Define starter prompts for the Chainlit UI
 @cl.set_starters
 async def set_starters():
     return [
@@ -196,13 +198,11 @@ async def set_starters():
             message='Can you provide a list of available tools and their descriptions?',
             icon='https://attic.sh/dhbw2bdxwayue0zgof33fxk8jkn1',
         ),
-        # calc 10 shares of AAPL
         cl.Starter(
             label='Calculate 10 shares of AAPL',
             message='get the current price of AAPL and then calculate how much 10 shares of AAPL would cost at the current price.',
             icon='https://cdn.simpleicons.org/apple',
         ),
-        # test calc tool
         cl.Starter(
             label='What is 10 * 5?',
             message='Calculate 10 * 5',
@@ -213,35 +213,38 @@ async def set_starters():
 
 @cl.on_message
 async def on_message(msg: cl.Message):
-    """Handle incoming messages and stream the response with Yahoo Finance MCP tools."""
+    """Handle incoming user messages, run the agent, and stream the response."""
     thread_id = cl.context.session.id
     history = [HumanMessage(content=msg.content)]
     reply = cl.Message(content='')
 
     try:
-        # Start Yahoo Finance MCP server and load its tools for this interaction
+        # Start the Yahoo Finance MCP server and create a client session
         async with stdio_client(server_params) as (read, write):
             async with ClientSession(read, write) as session:
                 await session.initialize()
+                # Load the tools available from the MCP server
                 mcp_tools = await load_mcp_tools(session)
 
-                # Combine MCP tools with local tools
+                # Combine the remote MCP tools with the local tools
                 tools = local_tools + mcp_tools
 
-                # Create LLM and graph bound to the combined tools
+                # Create the LLM and the agent graph with the full set of tools
                 llm = create_llm(MODEL_NAME)
                 agent_graph = build_state_graph_with(llm, tools)
 
+                # Stream the agent's execution steps back to the UI
                 async for chunk in agent_graph.astream(
                     {'messages': history},
                     config={'configurable': {'thread_id': thread_id}, 'recursion_limit': 50},
                 ):
-                    # Stream content from agent responses
+                    # Stream the LLM's final content response
                     if 'agent' in chunk and chunk['agent'].get('messages'):
                         agent_message = chunk['agent']['messages'][-1]
                         if hasattr(agent_message, 'content') and agent_message.content:
                             await reply.stream_token(f'\n\n[Agent message]\n {agent_message.content}')
 
+                        # Stream the tool calls the agent decides to make
                         if tool_calls := getattr(agent_message, 'tool_calls', None) or getattr(
                             agent_message, 'additional_kwargs', {}
                         ).get('tool_calls'):
@@ -252,16 +255,18 @@ async def on_message(msg: cl.Message):
                                     args = raw_args if isinstance(raw_args, dict) else json.loads(raw_args or '{}')
                                 except Exception:
                                     args = raw_args
-                                # Trim long args for readability
+                                # Stream tool call details, trimming long arguments for readability
                                 await reply.stream_token(f'\n\n[Tool call]\n {name} args: {str(args)[:500]}')
 
-                    # Visibility: stream tool results returned by the tools node
+                    # Stream the results returned by the tools
                     if 'tools' in chunk and chunk['tools'].get('messages'):
                         tool_msg = chunk['tools']['messages'][-1]
                         tool_name = getattr(tool_msg, 'name', '') or ''
                         if content := getattr(tool_msg, 'content', ''):
+                            # Stream tool results, trimming long content for readability
                             await reply.stream_token(f'\n[Tool result]\n {tool_name}: {str(content)[:700]}')
     except Exception as e:
         await reply.stream_token(f'Error: {str(e)}')
 
+    # Finalize and send the complete message stream
     await reply.send()
