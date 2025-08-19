@@ -1,41 +1,44 @@
-from langchain_core.messages import HumanMessage, AIMessageChunk
-from langchain_core.runnables.config import RunnableConfig
-from langchain_openai import ChatOpenAI
-from langchain.tools import tool
-
-from langgraph.checkpoint.memory import MemorySaver
-from langgraph.graph import START, END, MessagesState, StateGraph
-from langgraph.prebuilt import ToolNode
-
+from typing import Literal, List, Dict
 import chainlit as cl
-import os
+from langchain_openai import ChatOpenAI
+from langchain_ollama import ChatOllama
+from langchain_core.tools import tool
+from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
+from langchain.schema.runnable.config import RunnableConfig
+from langgraph.prebuilt import ToolNode
+from langgraph.graph import StateGraph, START, END
+from langgraph.graph.message import MessagesState
 from dotenv import load_dotenv
+import os
+from pygooglenews import GoogleNews
+import yfinance
+import pandas as pd
+import json
 
-# If you don't have it yet: pip install gnews
-from gnews import GNews as GoogleNews  # Alias to match provided tool code
+# New imports for MCP integration
+import asyncio
+from mcp import ClientSession, StdioServerParameters
+from mcp.client.stdio import stdio_client
+from langchain_mcp_adapters.tools import load_mcp_tools
 
-
-################################## Setup ##################################
-load_dotenv()  # Load environment variables from a .env file
-
+load_dotenv()
+# OLLAMA_BASE_URL = os.getenv('OLLAMA_BASE_URL')
+OLLAMA_BASE_URL = 'http://localhost:11434'
 openrouter_api_key = os.getenv('OPENROUTER_API_KEY')
+MODEL_NAME = 'qwen3:1.7b'
+MODEL_NAME = 'llama3.2'
+MODEL_NAME = 'openai/gpt-oss-120b'
 
+# Configure Yahoo Finance MCP server (ensure the server is installed, e.g., `pip install mcp-server-yfinance`)
+server_params = StdioServerParameters(
+    command='uvx',
+    args=['yfmcp@latest'],  # Alternative module names may be: mcp_server_yahoo_finance
+    env=None,
+)
 
-############################# Tools Definition ############################
 # ----------------------------------
 # Tool Definition
 # ----------------------------------
-@tool
-def get_top_news() -> str:
-    """Get the top news stories for the current country and language."""
-    try:
-        gn = GoogleNews(lang='en', country='US')
-        top_stories = gn.top_news()
-        articles = []
-        articles.extend(f'• {entry.title}\n  {entry.link}' for entry in top_stories['entries'][:10])
-        return '\n\n'.join(articles) if articles else 'No top news found.'
-    except Exception as e:
-        return f'Error fetching top news: {e}'
 
 
 @tool
@@ -44,66 +47,17 @@ def get_topic_headlines(topic: str) -> str:
 
     Accepted topics: WORLD, NATION, BUSINESS, TECHNOLOGY, ENTERTAINMENT, SCIENCE, SPORTS, HEALTH
     """
-    try:
-        valid_topics = ['WORLD', 'NATION', 'BUSINESS', 'TECHNOLOGY', 'ENTERTAINMENT', 'SCIENCE', 'SPORTS', 'HEALTH']
-        topic_upper = topic.upper()
+    valid_topics = ['WORLD', 'NATION', 'BUSINESS', 'TECHNOLOGY', 'ENTERTAINMENT', 'SCIENCE', 'SPORTS', 'HEALTH']
+    topic_upper = topic.upper()
 
-        if topic_upper not in valid_topics:
-            return f'Invalid topic. Please use one of: {", ".join(valid_topics)}'
+    if topic_upper not in valid_topics:
+        return f'Invalid topic. Please use one of: {", ".join(valid_topics)}'
 
-        gn = GoogleNews(lang='en', country='US')
-        headlines = gn.topic_headlines(topic_upper)
-        articles = []
-        articles.extend(f'• {entry.title}\n  {entry.link}' for entry in headlines['entries'][:10])
-        body = '\n\n'.join(articles) if articles else 'No headlines found.'
-        return f'Headlines for {topic}:\n\n' + body
-    except Exception as e:
-        return f'Error fetching topic headlines: {e}'
-
-
-@tool
-def get_geo_headlines(location: str) -> str:
-    """Get news headlines for a specific geographic location."""
-    try:
-        gn = GoogleNews(lang='en', country='US')
-        geo_news = gn.geo_headlines(location)
-        articles = []
-        articles.extend(f'• {entry.title}\n  {entry.link}' for entry in geo_news['entries'][:10])
-        body = '\n\n'.join(articles) if articles else 'No local news found.'
-        return f'News for {location}:\n\n' + body
-    except Exception as e:
-        return f'Error fetching geo headlines: {e}'
-
-
-@tool
-def search_news(query: str, when: str = None) -> str:
-    """Search for news articles using a custom query.
-
-    Args:
-        query: Search terms. Supports Google search operators like:
-               - "exact phrase" for phrase search
-               - boeing OR airbus for OR search
-               - boeing -airbus to exclude terms
-               - intitle:boeing to search in titles
-               - allintitle:multiple words to search all words in title
-        when: Time range filter (e.g., '1h', '12h', '1d', '7d', '1m')
-    """
-    try:
-        gn = GoogleNews(lang='en', country='US')
-        search_results = gn.search(query, when=when)
-
-        if not search_results['entries']:
-            return f'No news found for query: {query}'
-
-        articles = []
-        for entry in search_results['entries'][:10]:  # Limit to top 10
-            published = getattr(entry, 'published', 'Unknown date')
-            articles.append(f'• {entry.title}\n  Published: {published}\n  {entry.link}')
-
-        time_filter = f' (last {when})' if when else ''
-        return f"Search results for '{query}'{time_filter}:\n\n" + '\n\n'.join(articles)
-    except Exception as e:
-        return f'Error searching news: {e}'
+    gn = GoogleNews(lang='en', country='US')
+    headlines = gn.topic_headlines(topic_upper)
+    articles = []
+    articles.extend(f'• {entry.title}\n  {entry.link}' for entry in headlines['entries'][:10])
+    return f'Headlines for {topic}:\n\n' + '\n\n'.join(articles)
 
 
 @tool
@@ -114,96 +68,193 @@ def search_recent_news(query: str, hours: int = 1) -> str:
         query: Search terms
         hours: Number of hours to look back (1-24)
     """
+    if hours < 1 or hours > 24:
+        return 'Hours must be between 1 and 24'
+
+    gn = GoogleNews(lang='en', country='US')
+    search_results = gn.search(query, when=f'{hours}h')
+
+    if not search_results['entries']:
+        return f'No recent news found for query: {query} in the last {hours} hours'
+
+    articles = []
+    for entry in search_results['entries'][:10]:
+        published = getattr(entry, 'published', 'Unknown date')
+        articles.append(f'• {entry.title}\n  Published: {published}\n  {entry.link}')
+
+    return f"Recent news for '{query}' (last {hours} hours):\n\n" + '\n\n'.join(articles)
+
+
+@tool
+def calculator(expression: str) -> str:
+    """Calculate a mathematical expression using a safe eval."""
     try:
-        if hours < 1 or hours > 24:
-            return 'Hours must be between 1 and 24'
-
-        gn = GoogleNews(lang='en', country='US')
-        search_results = gn.search(query, when=f'{hours}h')
-
-        if not search_results['entries']:
-            return f'No recent news found for query: {query} in the last {hours} hours'
-
-        articles = []
-        for entry in search_results['entries'][:10]:
-            published = getattr(entry, 'published', 'Unknown date')
-            articles.append(f'• {entry.title}\n  Published: {published}\n  {entry.link}')
-
-        return f"Recent news for '{query}' (last {hours} hours):\n\n" + '\n\n'.join(articles)
+        # Use a whitelist to prevent arbitrary code execution
+        allowed_chars = set('0123456789+-*/.(). ')
+        if not expression or any(c not in allowed_chars for c in expression):
+            return 'Invalid expression'
+        result = eval(expression)
+        return f'{expression} = {result}'
     except Exception as e:
-        return f'Error searching recent news: {e}'
+        return f'Calculation error: {e}'
 
 
-tools = [get_top_news, get_topic_headlines, get_geo_headlines, search_news, search_recent_news]
-tool_node = ToolNode(tools=tools)
+# ----------------------------------
+# LLM Setup
+# ----------------------------------
+# Define local (non-MCP) tools
+local_tools = [get_topic_headlines, search_recent_news]
+
+# System prompt that includes Al Roker personality
+SYSTEM_PROMPT = """You are a helpful news assistant with the enthusiastic and warm personality of Al Roker. 
+Respond to user queries about news and current events in Al Roker's characteristic style - upbeat, friendly, 
+and engaging. Use tools when needed to fetch current news information, then present the results in your 
+distinctive voice."""
 
 
-############################# Graph Definition ############################
-# Initialize the state graph with a schema for storing messages
-workflow = StateGraph(state_schema=MessagesState)
-
-# Base LLM
-model = ChatOpenAI(
-    model='google/gemini-2.5-flash-lite',
-    base_url=os.getenv('OPENROUTER_BASE_URL', 'https://openrouter.ai/api/v1'),
-    api_key=openrouter_api_key,
-    temperature=0,
-)
-
-# LLM bound with tools (enables function/tool calling)
-llm_with_tools = model.bind_tools(tools)
+def create_llm(model_name: str, temperature: float = 0.1) -> ChatOllama:
+    """Initialize and configure a Chat model (OpenRouter/OpenAI or Ollama) without binding tools."""
+    llm = ChatOllama(model=model_name, base_url=OLLAMA_BASE_URL, temperature=temperature, streaming=True)
+    # Base LLM via OpenRouter
+    llm = ChatOpenAI(
+        model=MODEL_NAME,
+        base_url=os.getenv('OPENROUTER_BASE_URL', 'https://openrouter.ai/api/v1'),
+        api_key=openrouter_api_key,
+        temperature=0,
+    )
+    return llm
 
 
-def call_model(state: MessagesState):
-    """Invokes the model (with tools bound) with the current state and returns the new message."""
-    response = llm_with_tools.invoke(state['messages'])
-    # Ensure response is appended as a list entry
-    return {'messages': [response]}
+# ----------------------------------
+# Graph Node Functions
+# ----------------------------------
 
 
-def should_continue(state: MessagesState):
-    """Route to tools if the last AI message requested tool calls, else end."""
-    messages = state['messages']
-    if not messages:
-        return 'end'
-    last = messages[-1]
-    # OpenAI-compatible tool calls are found on AIMessage.tool_calls
-    has_tool_calls = getattr(last, 'tool_calls', None)
-    return 'tools' if has_tool_calls else 'end'
+def should_continue(state: MessagesState) -> Literal['tools', '__end__']:
+    """Decide whether to invoke tools or end the conversation."""
+    last = state['messages'][-1]
+    # Limit the number of tool calls to prevent infinite loops
+    tool_call_count = sum(bool(hasattr(msg, 'tool_calls') and msg.tool_calls) for msg in state['messages'])
+
+    return 'tools' if last.tool_calls and tool_call_count < 5 else '__end__'
 
 
-# Nodes
-workflow.add_node('model', call_model)
-workflow.add_node('tools', tool_node)
+def build_state_graph_with(llm, tools) -> StateGraph:
+    """Build a StateGraph using the provided LLM and tools (including MCP tools)."""
+    builder = StateGraph(MessagesState)
 
-# Edges
-workflow.add_edge(START, 'model')
-workflow.add_conditional_edges('model', should_continue, {'tools': 'tools', 'end': END})
-workflow.add_edge('tools', 'model')
+    def call_llm_node(state: MessagesState) -> Dict[str, List[BaseMessage]]:
+        messages = [SystemMessage(content=SYSTEM_PROMPT)] + state['messages']
+        response = llm.bind_tools(tools).invoke(messages)
+        return {'messages': [response]}
 
-############################ Graph Compilation ############################
-memory = MemorySaver()  # In-memory storage for conversation history
+    tool_node = ToolNode(tools=tools)
 
-# Compile the graph into a runnable, adding the memory checkpointer
-app = workflow.compile(checkpointer=memory)
+    builder.add_node('agent', call_llm_node)
+    builder.add_node('tools', tool_node)
+
+    builder.add_edge(START, 'agent')
+    builder.add_conditional_edges('agent', should_continue)
+    builder.add_edge('tools', 'agent')
+
+    return builder.compile(checkpointer=None)
 
 
-############################### Chainlit UI ###############################
+# ----------------------------------
+# Chainlit Event Handler
+# ----------------------------------
+
+
+# Starter Prompts
+@cl.set_starters
+async def set_starters():
+    return [
+        cl.Starter(
+            label='Get Tesla stock price?',
+            message='What is the current stock price of TSLA?',
+            icon='https://cdn.simpleicons.org/tesla',
+        ),
+        cl.Starter(
+            label='Summarize and analysis recent Apple News?',
+            message='Can you provide a summary and analysis of the latest news articles about Apple?',
+            icon='https://cdn.simpleicons.org/apple',
+        ),
+        cl.Starter(
+            label='Summarize Tech Headlines',
+            message='Can you provide a summary of the latest headlines in technology?',
+            icon='https://api.iconify.design/eos-icons/ai.svg',
+            command='code',
+        ),
+        cl.Starter(
+            label='Summarize Recent News?',
+            message='Can you provide a summary of the latest news articles?',
+            icon='https://attic.sh/si2powwhauur4mlts7mqn2e3syz3',
+        ),
+        cl.Starter(
+            label='Available tools?',
+            message='Can you provide a list of available tools and their descriptions?',
+            icon='https://attic.sh/dhbw2bdxwayue0zgof33fxk8jkn1',
+        ),
+        # calc 10 shares of AAPL
+        cl.Starter(
+            label='Calculate 10 shares of AAPL',
+            message='What is the total cost of 10 shares of AAPL at the current price show your work?',
+            icon='https://cdn.simpleicons.org/apple',
+        ),
+    ]
+
+
 @cl.on_message
-async def main(message: cl.Message):
-    """Process incoming user messages and stream back the AI's response."""
-    answer = cl.Message(content='')
-    await answer.send()
+async def on_message(msg: cl.Message):
+    """Handle incoming messages and stream the response with Yahoo Finance MCP tools."""
+    thread_id = cl.context.session.id
+    history = [HumanMessage(content=msg.content)]
+    reply = cl.Message(content='')
 
-    # Configure the runnable to associate the conversation with the user's session
-    config: RunnableConfig = {'configurable': {'thread_id': cl.context.session.thread_id}}
+    try:
+        # Start Yahoo Finance MCP server and load its tools for this interaction
+        async with stdio_client(server_params) as (read, write):
+            async with ClientSession(read, write) as session:
+                await session.initialize()
+                mcp_tools = await load_mcp_tools(session)
 
-    # Stream the graph's output
-    for msg, _ in app.stream(
-        {'messages': [HumanMessage(content=message.content)]},
-        config,
-        stream_mode='messages',
-    ):
-        if isinstance(msg, AIMessageChunk):
-            answer.content += msg.content  # type: ignore
-            await answer.update()
+                # Combine MCP tools with local tools
+                tools = local_tools + mcp_tools
+
+                # Create LLM and graph bound to the combined tools
+                llm = create_llm(MODEL_NAME)
+                agent_graph = build_state_graph_with(llm, tools)
+
+                async for chunk in agent_graph.astream(
+                    {'messages': history},
+                    config={'configurable': {'thread_id': thread_id}, 'recursion_limit': 50},
+                ):
+                    # Stream content from agent responses
+                    if 'agent' in chunk and chunk['agent'].get('messages'):
+                        agent_message = chunk['agent']['messages'][-1]
+                        if hasattr(agent_message, 'content') and agent_message.content:
+                            await reply.stream_token(f'\n\n[Agent message]\n {agent_message.content}')
+
+                        if tool_calls := getattr(agent_message, 'tool_calls', None) or getattr(
+                            agent_message, 'additional_kwargs', {}
+                        ).get('tool_calls'):
+                            for tc in tool_calls:
+                                name = tc.get('name') or (tc.get('function') or {}).get('name')
+                                raw_args = tc.get('args') or (tc.get('function') or {}).get('arguments')
+                                try:
+                                    args = raw_args if isinstance(raw_args, dict) else json.loads(raw_args or '{}')
+                                except Exception:
+                                    args = raw_args
+                                # Trim long args for readability
+                                await reply.stream_token(f'\n\n[Tool call]\n {name} args: {str(args)[:500]}')
+
+                    # Visibility: stream tool results returned by the tools node
+                    if 'tools' in chunk and chunk['tools'].get('messages'):
+                        tool_msg = chunk['tools']['messages'][-1]
+                        tool_name = getattr(tool_msg, 'name', '') or ''
+                        if content := getattr(tool_msg, 'content', ''):
+                            await reply.stream_token(f'\n[Tool result]\n {tool_name}: {str(content)[:700]}')
+    except Exception as e:
+        await reply.stream_token(f'Error: {str(e)}')
+
+    await reply.send()
