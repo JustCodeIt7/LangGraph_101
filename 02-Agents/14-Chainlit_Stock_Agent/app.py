@@ -26,7 +26,6 @@ MODEL_NAME = 'openai/gpt-oss-120b'
 # Tool Definition
 # ----------------------------------
 
-
 @tool
 def get_topic_headlines(topic: str) -> str:
     """Get news headlines for a specific topic.
