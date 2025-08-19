@@ -14,8 +14,9 @@ from pygooglenews import GoogleNews
 import yfinance
 
 load_dotenv()
-OLLAMA_BASE_URL = os.getenv('OLLAMA_BASE_URL')
-
+# OLLAMA_BASE_URL = os.getenv('OLLAMA_BASE_URL')
+OLLAMA_BASE_URL = 'http://localhost:11434'
+openrouter_api_key = os.getenv('OPENROUTER_API_KEY')
 MODEL_NAME = 'qwen3:1.7b'
 MODEL_NAME = 'llama3.2'
 
