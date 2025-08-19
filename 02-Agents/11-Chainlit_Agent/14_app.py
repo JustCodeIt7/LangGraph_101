@@ -13,6 +13,7 @@ import os
 from pygooglenews import GoogleNews
 import yfinance
 import pandas as pd
+import json
 # New imports for MCP integration
 import asyncio
 from mcp import ClientSession, StdioServerParameters
@@ -232,6 +233,29 @@ async def on_message(msg: cl.Message):
                         agent_message = chunk['agent']['messages'][-1]
                         if hasattr(agent_message, 'content') and agent_message.content:
                             await reply.stream_token(agent_message.content)
+
+                        # Visibility: announce tool calls (name + args) decided by the agent
+                        tool_calls = getattr(agent_message, 'tool_calls', None) or getattr(
+                            agent_message, 'additional_kwargs', {}
+                        ).get('tool_calls')
+                        if tool_calls:
+                            for tc in tool_calls:
+                                name = tc.get('name') or (tc.get('function') or {}).get('name')
+                                raw_args = tc.get('args') or (tc.get('function') or {}).get('arguments')
+                                try:
+                                    args = raw_args if isinstance(raw_args, dict) else json.loads(raw_args or '{}')
+                                except Exception:
+                                    args = raw_args
+                                # Trim long args for readability
+                                await reply.stream_token(f'\n\n[Tool call] {name} args: {str(args)[:500]}')
+
+                    # Visibility: stream tool results returned by the tools node
+                    if 'tools' in chunk and chunk['tools'].get('messages'):
+                        tool_msg = chunk['tools']['messages'][-1]
+                        tool_name = getattr(tool_msg, 'name', '') or ''
+                        content = getattr(tool_msg, 'content', '')
+                        if content:
+                            await reply.stream_token(f'\n[Tool result] {tool_name}: {str(content)[:700]}')
     except Exception as e:
         await reply.stream_token(f'Error: {str(e)}')
 
