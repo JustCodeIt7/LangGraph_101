@@ -13,6 +13,11 @@ import os
 from pygooglenews import GoogleNews
 import yfinance
 import pandas as pd
+# New imports for MCP integration
+import asyncio
+from mcp import ClientSession, StdioServerParameters
+from mcp.client.stdio import stdio_client
+from langchain_mcp_adapters.tools import load_mcp_tools
 
 load_dotenv()
 # OLLAMA_BASE_URL = os.getenv('OLLAMA_BASE_URL')
@@ -21,6 +26,13 @@ openrouter_api_key = os.getenv('OPENROUTER_API_KEY')
 MODEL_NAME = 'qwen3:1.7b'
 MODEL_NAME = 'llama3.2'
 MODEL_NAME = 'openai/gpt-oss-120b'
+
+# Configure Yahoo Finance MCP server (ensure the server is installed, e.g., `pip install mcp-server-yfinance`)
+server_params = StdioServerParameters(
+    command='uvx',
+    args=['yfmcp@latest'],  # Alternative module names may be: mcp_server_yahoo_finance
+    env=None,
+)
 
 # ----------------------------------
 # Tool Definition
@@ -71,44 +83,25 @@ def search_recent_news(query: str, hours: int = 1) -> str:
     return f"Recent news for '{query}' (last {hours} hours):\n\n" + '\n\n'.join(articles)
 
 
-# New tool: Fetch latest stock prices as a DataFrame (returned as CSV text for LLM consumption)
 @tool
-def get_stock_prices(ticker: str, period: str = '1d', interval: str = '1m', rows: int = 20) -> str:
-    """Get recent stock price data for a ticker as a DataFrame (CSV string).
-
-    Args:
-        ticker: Stock symbol (e.g., AAPL, MSFT)
-        period: Data period (e.g., '1d', '5d', '1mo', '3mo', '1y')
-        interval: Data interval (e.g., '1m', '5m', '15m', '1h', '1d')
-        rows: Number of most recent rows to return
-    Returns:
-        CSV string representing a pandas DataFrame with timestamp and OHLCV columns.
-    """
+def calculator(expression: str) -> str:
+    """Calculate a mathematical expression using a safe eval."""
     try:
-        df = yfinance.download(tickers=ticker, period=period, interval=interval, progress=False, threads=False)
-        if df is None or df.empty:
-            return f'No price data found for {ticker} (period={period}, interval={interval}).'
-
-        # Keep the last N rows, reset index so Datetime becomes a column
-        df = df.tail(max(1, rows)).reset_index()
-
-        # Normalize potential MultiIndex columns (e.g., if dividends/splits present)
-        df.columns = [col if isinstance(col, str) else ' '.join(map(str, col)).strip() for col in df.columns]
-
-        # Ensure standard column names exist if available
-        # Expected columns often include: Datetime/Date, Open, High, Low, Close, Adj Close, Volume
-        csv_text = df.to_csv(index=False)
-        header = f'Price data for {ticker.upper()} (period={period}, interval={interval}, rows={len(df)}):\n'
-        return header + csv_text
+        # Use a whitelist to prevent arbitrary code execution
+        allowed_chars = set('0123456789+-*/.(). ')
+        if not expression or any(c not in allowed_chars for c in expression):
+            return 'Invalid expression'
+        result = eval(expression)
+        return f'{expression} = {result}'
     except Exception as e:
-        return f'Error fetching data for {ticker}: {e}'
+        return f'Calculation error: {e}'
 
 
 # ----------------------------------
 # LLM Setup
 # ----------------------------------
-# Define all available tools
-all_tools = [get_topic_headlines, search_recent_news, get_stock_prices]
+# Define local (non-MCP) tools
+local_tools = [get_topic_headlines, search_recent_news]
 
 # System prompt that includes Al Roker personality
 SYSTEM_PROMPT = """You are a helpful news assistant with the enthusiastic and warm personality of Al Roker. 
@@ -118,27 +111,23 @@ distinctive voice."""
 
 
 def create_llm(model_name: str, temperature: float = 0.1) -> ChatOllama:
-    """Initialize and configure a ChatOllama instance with system prompt."""
+    """Initialize and configure a Chat model (OpenRouter/OpenAI or Ollama) without binding tools."""
     llm = ChatOllama(model=model_name, base_url=OLLAMA_BASE_URL, temperature=temperature, streaming=True)
-    # Base LLM
+    # Base LLM via OpenRouter
     llm = ChatOpenAI(
         model=MODEL_NAME,
         base_url=os.getenv('OPENROUTER_BASE_URL', 'https://openrouter.ai/api/v1'),
         api_key=openrouter_api_key,
         temperature=0,
     )
-
-    return llm.bind_tools(all_tools)
-
-
-# Single LLM instance
-base_llm = create_llm(MODEL_NAME)
-tool_node = ToolNode(tools=all_tools)
+    return llm
 
 
 # ----------------------------------
 # Graph Node Functions
 # ----------------------------------
+
+
 def should_continue(state: MessagesState) -> Literal['tools', '__end__']:
     """Decide whether to invoke tools or end the conversation."""
     last = state['messages'][-1]
@@ -148,54 +137,101 @@ def should_continue(state: MessagesState) -> Literal['tools', '__end__']:
     return 'tools' if last.tool_calls and tool_call_count < 5 else '__end__'
 
 
-def call_llm(state: MessagesState) -> Dict[str, List[BaseMessage]]:
-    """Invoke the LLM with system prompt and append its response."""
-    messages = [SystemMessage(content=SYSTEM_PROMPT)] + state['messages']
-    response = base_llm.invoke(messages)
-    return {'messages': [response]}
-
-
-# ----------------------------------
-# Build State Graph
-# ----------------------------------
-def build_state_graph() -> StateGraph:
+def build_state_graph_with(llm, tools) -> StateGraph:
+    """Build a StateGraph using the provided LLM and tools (including MCP tools)."""
     builder = StateGraph(MessagesState)
-    builder.add_node('agent', call_llm)
+
+    def call_llm_node(state: MessagesState) -> Dict[str, List[BaseMessage]]:
+        messages = [SystemMessage(content=SYSTEM_PROMPT)] + state['messages']
+        response = llm.bind_tools(tools).invoke(messages)
+        return {'messages': [response]}
+
+    tool_node = ToolNode(tools=tools)
+
+    builder.add_node('agent', call_llm_node)
     builder.add_node('tools', tool_node)
 
     builder.add_edge(START, 'agent')
     builder.add_conditional_edges('agent', should_continue)
     builder.add_edge('tools', 'agent')
 
-    # Compile with recursion limit
     return builder.compile(checkpointer=None)
-
-
-agent_graph = build_state_graph()
-# print graph structure for debugging
-print(agent_graph.get_graph().draw_ascii())
 
 
 # ----------------------------------
 # Chainlit Event Handler
 # ----------------------------------
+
+
+# Starter Prompts
+@cl.set_starters
+async def set_starters():
+    return [
+        cl.Starter(
+            label='Get Tesla stock price?',
+            message='What is the current stock price of TSLA?',
+            icon='https://cdn.simpleicons.org/tesla',
+        ),
+        cl.Starter(
+            label='Summarize and analysis recent Apple News?',
+            message='Can you provide a summary and analysis of the latest news articles about Apple?',
+            icon='https://cdn.simpleicons.org/apple',
+        ),
+        cl.Starter(
+            label='Summarize Tech Headlines',
+            message='Can you provide a summary of the latest headlines in technology?',
+            icon='https://api.iconify.design/eos-icons/ai.svg',
+            command='code',
+        ),
+        cl.Starter(
+            label='Summarize Recent News?',
+            message='Can you provide a summary of the latest news articles?',
+            icon='https://attic.sh/si2powwhauur4mlts7mqn2e3syz3',
+        ),
+        cl.Starter(
+            label='Available tools?',
+            message='Can you provide a list of available tools and their descriptions?',
+            icon='https://attic.sh/dhbw2bdxwayue0zgof33fxk8jkn1',
+        ),
+        # calc 10 shares of AAPL
+        cl.Starter(
+            label='Calculate 10 shares of AAPL',
+            message='What is the total cost of 10 shares of AAPL at the current price show your work?',
+            icon='https://cdn.simpleicons.org/apple',
+        ),
+    ]
+
+
 @cl.on_message
 async def on_message(msg: cl.Message):
-    """Handle incoming messages and stream the response."""
+    """Handle incoming messages and stream the response with Yahoo Finance MCP tools."""
     thread_id = cl.context.session.id
     history = [HumanMessage(content=msg.content)]
     reply = cl.Message(content='')
 
     try:
-        async for chunk in agent_graph.astream(
-            {'messages': history},
-            config={'configurable': {'thread_id': thread_id}, 'recursion_limit': 50},
-        ):
-            # Stream content from agent responses
-            if 'agent' in chunk and chunk['agent'].get('messages'):
-                agent_message = chunk['agent']['messages'][-1]
-                if hasattr(agent_message, 'content') and agent_message.content:
-                    await reply.stream_token(agent_message.content)
+        # Start Yahoo Finance MCP server and load its tools for this interaction
+        async with stdio_client(server_params) as (read, write):
+            async with ClientSession(read, write) as session:
+                await session.initialize()
+                mcp_tools = await load_mcp_tools(session)
+
+                # Combine MCP tools with local tools
+                tools = local_tools + mcp_tools
+
+                # Create LLM and graph bound to the combined tools
+                llm = create_llm(MODEL_NAME)
+                agent_graph = build_state_graph_with(llm, tools)
+
+                async for chunk in agent_graph.astream(
+                    {'messages': history},
+                    config={'configurable': {'thread_id': thread_id}, 'recursion_limit': 50},
+                ):
+                    # Stream content from agent responses
+                    if 'agent' in chunk and chunk['agent'].get('messages'):
+                        agent_message = chunk['agent']['messages'][-1]
+                        if hasattr(agent_message, 'content') and agent_message.content:
+                            await reply.stream_token(agent_message.content)
     except Exception as e:
         await reply.stream_token(f'Error: {str(e)}')
 
