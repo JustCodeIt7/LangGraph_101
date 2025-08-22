@@ -1,0 +1,6 @@
+langchain==0.3.0
+langchain-ollama==0.2.0
+langchain-core==0.3.0
+langgraph==0.2.28
+requests==2.32.3
+typing-extensions==4.12.2

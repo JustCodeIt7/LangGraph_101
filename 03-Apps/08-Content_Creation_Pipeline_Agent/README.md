@@ -82,3 +82,75 @@ FUNCTION COMPOSE_NEWSLETTER(curated_items, topic_theme)
   RETURN newsletter_html
 END FUNCTION
 ```
+
+## Installation & Usage
+
+### Prerequisites
+- Python 3.8+
+- [Ollama](https://ollama.ai) installed and running
+
+### Quick Start
+
+1. **Setup the environment:**
+   ```bash
+   python setup.py
+   ```
+
+2. **Run the agent:**
+   ```bash
+   python app.py
+   ```
+
+### Manual Setup (Alternative)
+
+1. **Install dependencies:**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+2. **Start Ollama and pull llama3.2:**
+   ```bash
+   # In a separate terminal
+   ollama serve
+   
+   # Pull the model
+   ollama pull llama3.2
+   ```
+
+3. **Run the agent:**
+   ```bash
+   python app.py
+   ```
+
+## Usage Examples
+
+The agent can handle various content creation requests:
+
+- **Blog Outline:** "Create a blog outline about sustainable energy"
+- **Video Script:** "Generate a video script about productivity tips"
+- **Social Media:** "Adapt this content for social media platforms"
+- **Newsletter:** "Curate a newsletter about AI trends"
+
+## Features
+
+✅ **Blog Post Outlines** - Structured outlines with SEO keywords
+✅ **Video Script Outlines** - Engaging scripts with visual suggestions
+✅ **Social Media Adaptation** - Platform-specific content for Twitter, LinkedIn, Instagram
+✅ **Newsletter Curation** - Professional newsletter drafts
+✅ **Topic Research** - Automated research and insights
+✅ **LangGraph Workflow** - Structured agent pipeline
+✅ **Local LLM** - Uses Ollama with llama3.2 for privacy
+
+## Architecture
+
+The agent uses LangGraph to create a stateful workflow:
+1. **Parse Request** - Understand user intent
+2. **Research Topic** - Gather relevant information
+3. **Route & Generate** - Create content based on request type
+4. **Output** - Return formatted content
+
+Built with:
+- **LangGraph** - Agent orchestration framework
+- **Ollama** - Local LLM inference
+- **llama3.2** - Language model
+- **LangChain** - LLM integration utilities
