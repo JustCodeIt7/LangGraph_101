@@ -6,11 +6,11 @@ from langgraph.types import interrupt, Command
 from langgraph.checkpoint.memory import InMemorySaver
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 from langchain_ollama import ChatOllama
-
+from rich import print
 ################################ Configuration & Setup ################################
 
 # Initialize the Ollama large language model
-llm = ChatOllama(model="llama3.2", temperature=0.7)
+llm = ChatOllama(model="phi4-mini", temperature=0.7)
 
 
 # Define the dictionary structure for the graph's state
@@ -146,13 +146,13 @@ def create_app():
 
     # Compile the graph into a runnable application
     app = builder.compile(checkpointer=checkpointer)
-
+    
     return app
 
 
 ################################ Application Execution ################################
 
-def interactive_run():
+def main():
     """Run an interactive console session for the Human-in-the-Loop app."""
 
     app = create_app()
@@ -211,4 +211,4 @@ def interactive_run():
 # Define the main entry point for the script
 if __name__ == "__main__":
     print("🚀 Advanced Human-in-the-Loop LangGraph App with Ollama")
-    interactive_run()
+    main()
