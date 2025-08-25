@@ -1,248 +1,214 @@
-"""
-Basic Human in the Loop LangGraph App
-A simple chatbot that can pause execution to ask humans for input when needed.
-"""
-
 import uuid
-from typing import TypedDict, Literal, Optional
-from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
-from langchain_core.tools import tool
-from langgraph.graph import StateGraph, START, END, MessagesState
+from typing import TypedDict, Optional
+
+from langgraph.graph import StateGraph, START, END
 from langgraph.types import interrupt, Command
 from langgraph.checkpoint.memory import InMemorySaver
-from langgraph.prebuilt import ToolNode
+from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 from langchain_ollama import ChatOllama
 
+################################ Configuration & Setup ################################
 
-
-# Define the graph state
-class AgentState(MessagesState):
-    """State for our human-in-the-loop agent."""
-    needs_human_input: bool = False
-    human_feedback: Optional[str] = None
-
-
-# Initialize the LLM (you can replace with any LLM)
+# Initialize the Ollama large language model
 llm = ChatOllama(model="llama3.2", temperature=0.7)
 
 
-# Define tools
-@tool
-def get_weather(location: str) -> str:
-    """Get the current weather for a location."""
-    # Simulate weather data
-    return f"The weather in {location} is sunny with 75°F temperature."
+# Define the dictionary structure for the graph's state
+class PromptState(TypedDict):
+    original_prompt: str
+    improved_prompt: Optional[str]
+    final_prompt: Optional[str]
+    final_answer: Optional[str]
+    step: str  # Track the current step for UI feedback
 
 
-@tool
-def ask_human(question: str) -> str:
-    """Ask a human for input when the AI needs clarification or approval."""
-    # This will trigger an interrupt for human input
+################################ Core Logic & Helper Functions ################################
+
+def call_llm(prompt: str, system_message: str = "") -> str:
+    """
+    Call Ollama LLM with a system message and a user prompt.
+    """
+    messages = []
+    # Prepend a system message if one is provided
+    if system_message:
+        messages.append(SystemMessage(content=system_message))
+    messages.append(HumanMessage(content=prompt))
+
+    # Invoke the model and return the text content
+    response = llm.invoke(messages)
+    return response.content
+
+
+################################ Graph Nodes ################################
+
+def improve_prompt_node(state: PromptState) -> PromptState:
+    """
+    Use the LLM to refine and improve the user's original prompt.
+    """
+    print(f"🤖 Improving prompt with Ollama: {state['original_prompt']}")
+
+    # Define the expert persona and instructions for the LLM
+    system_message = """You are a prompt engineering expert. Take the user's original prompt and improve it to be:
+1. More specific and detailed
+2. Clear about the expected output format
+3. Include relevant context that would help get better responses
+4. Maintain the original intent but make it more effective
+
+Return only the improved prompt, no explanations or additional text."""
+
+    # Generate the improved prompt
+    improved_prompt = call_llm(state['original_prompt'], system_message)
+
+    # Update the graph's state with the new prompt
+    return {
+        **state,
+        "improved_prompt": improved_prompt,
+        "step": "prompt_improved"
+    }
+
+
+def human_review_node(state: PromptState) -> PromptState:
+    """
+    Pause the graph's execution to allow for human review and editing.
+    """
+    print("👤 Requesting human review...")
+
+    # Interrupt execution, passing necessary data to the user for review
     human_response = interrupt({
-        "type": "human_input_request",
-        "question": question,
-        "instruction": "Please provide your response below:"
+        "task": "Please review and edit the improved prompt if needed",
+        "original_prompt": state["original_prompt"],
+        "improved_prompt": state["improved_prompt"],
+        "instructions": "You can either approve the improved prompt or provide an edited version",
+        "step": "awaiting_human_review"
     })
-    return human_response
 
-
-# Define the tools list
-tools = [get_weather, ask_human]
-tool_node = ToolNode(tools)
-
-# Bind tools to the LLM
-llm_with_tools = llm.bind_tools(tools)
-
-
-# Define nodes
-def agent_node(state: AgentState):
-    """Main agent node that decides what to do next."""
-    system_message = SystemMessage(
-        content="""You are a helpful assistant. You can:
-        1. Get weather information for any location
-        2. Ask humans for input when you need clarification or approval
-        
-        When you're unsure about something or need human approval for an action,
-        use the ask_human tool to get clarification.
-        
-        Be conversational and helpful!"""
-    )
-    
-    messages = [system_message] + state["messages"]
-    response = llm_with_tools.invoke(messages)
-    return {"messages": [response]}
-
-
-def should_continue(state: AgentState) -> Literal["tools", "end"]:
-    """Determine if we should continue with tools or end."""
-    last_message = state["messages"][-1]
-    
-    if hasattr(last_message, 'tool_calls') and last_message.tool_calls:
-        return "tools"
-    return "end"
-
-
-def create_graph():
-    """Create and compile the LangGraph workflow."""
-    # Create the workflow
-    workflow = StateGraph(AgentState)
-    
-    # Add nodes
-    workflow.add_node("agent", agent_node)
-    workflow.add_node("tools", tool_node)
-    
-    # Set entry point
-    workflow.add_edge(START, "agent")
-    
-    # Add conditional edges
-    workflow.add_conditional_edges(
-        "agent",
-        should_continue,
-        {
-            "tools": "tools",
-            "end": END
-        }
-    )
-    
-    # Add edge from tools back to agent
-    workflow.add_edge("tools", "agent")
-    
-    # Compile with checkpointer for interrupt support
-    checkpointer = InMemorySaver()
-    return workflow.compile(checkpointer=checkpointer)
-
-
-def run_conversation():
-    """Run an interactive conversation with the agent."""
-    graph = create_graph()
-    thread_id = str(uuid.uuid4())
-    config = {"configurable": {"thread_id": thread_id}}
-    
-    print("🤖 Human-in-the-Loop ChatBot")
-    print("Type 'quit' to exit, 'help' for examples")
-    print("-" * 50)
-    
-    while True:
-        # Get user input
-        user_input = input("\n👤 You: ").strip()
-        
-        if user_input.lower() == 'quit':
-            print("👋 Goodbye!")
-            break
-        elif user_input.lower() == 'help':
-            print("""
-📝 Example prompts:
-- "What's the weather in New York?"
-- "Should I invest in stocks? I have $1000 to invest."
-- "Help me plan a vacation to Europe"
-- "I need approval to delete important files"
-            """)
-            continue
-        
-        if not user_input:
-            continue
-        
-        try:
-            # Create human message
-            human_msg = HumanMessage(content=user_input)
-            
-            # Stream the response
-            print("\n🤖 Assistant: ", end="", flush=True)
-            
-            for event in graph.stream(
-                {"messages": [human_msg]}, 
-                config=config,
-                stream_mode="values"
-            ):
-                # Check for interrupts (human input requests)
-                if "__interrupt__" in event:
-                    interrupt_data = event["__interrupt__"][0]
-                    question = interrupt_data.value.get("question", "Please provide input:")
-                    
-                    print(f"\n\n❓ {question}")
-                    human_response = input("👤 Your response: ").strip()
-                    
-                    # Resume with human input
-                    print("\n🤖 Assistant: ", end="", flush=True)
-                    for resume_event in graph.stream(
-                        Command(resume=human_response),
-                        config=config,
-                        stream_mode="values"
-                    ):
-                        if "messages" in resume_event and resume_event["messages"]:
-                            last_msg = resume_event["messages"][-1]
-                            if hasattr(last_msg, 'content') and isinstance(last_msg, AIMessage):
-                                print(last_msg.content, flush=True)
-                    break
-                
-                # Print regular messages
-                elif "messages" in event and event["messages"]:
-                    last_msg = event["messages"][-1]
-                    if hasattr(last_msg, 'content') and isinstance(last_msg, AIMessage):
-                        print(last_msg.content, flush=True)
-        
-        except KeyboardInterrupt:
-            print("\n\n⚠️  Interrupted by user")
-            continue
-        except Exception as e:
-            print(f"\n❌ Error: {e}")
-            continue
-
-
-def demo_interrupt_workflow():
-    """Demonstrate the interrupt functionality with a simple example."""
-    print("\n🔧 Running Demo: Human Approval Workflow")
-    print("-" * 50)
-    
-    graph = create_graph()
-    thread_id = str(uuid.uuid4())
-    config = {"configurable": {"thread_id": thread_id}}
-    
-    # Test message that should trigger human input
-    test_message = HumanMessage(
-        content="I want to delete all my important files. Should I proceed?"
-    )
-    
-    print("👤 User: I want to delete all my important files. Should I proceed?")
-    print("\n🤖 Assistant will ask for human approval...")
-    
-    # Run until interrupt
-    result = graph.invoke({"messages": [test_message]}, config=config)
-    
-    if "__interrupt__" in result:
-        interrupt_data = result["__interrupt__"][0]
-        print(f"\n❓ Agent asks: {interrupt_data.value.get('question', 'Need input')}")
-        
-        # Simulate human response
-        human_decision = "No, don't delete the files"
-        print(f"👤 Human responds: {human_decision}")
-        
-        # Resume with human input
-        final_result = graph.invoke(
-            Command(resume=human_decision),
-            config=config
-        )
-        
-        if "messages" in final_result:
-            final_message = final_result["messages"][-1]
-            print(f"\n🤖 Final response: {final_message.content}")
-
-
-if __name__ == "__main__":
-    print("🚀 Basic Human in the Loop LangGraph App")
-    print("=" * 50)
-    
-    # Show available modes
-    print("\nChoose mode:")
-    print("1. Interactive chat")
-    print("2. Demo workflow")
-    
-    choice = input("\nEnter choice (1 or 2): ").strip()
-    
-    if choice == "1":
-        run_conversation()
-    elif choice == "2":
-        demo_interrupt_workflow()
+    # Process the human's response after the graph resumes
+    if isinstance(human_response, dict):
+        # Handle a structured dictionary response
+        final_prompt = human_response.get("edited_prompt", state["improved_prompt"]) # Default to original if no edit
+        action = human_response.get("action", "approve")
     else:
-        print("Invalid choice. Running interactive chat...")
-        run_conversation()
+        # Handle a direct string input from the user
+        final_prompt = human_response if human_response.strip() else state["improved_prompt"]
+        action = "edit" if human_response.strip() else "approve"
+
+    print(f"✅ Human {action}ed the prompt")
+
+    # Update the state with the finalized prompt
+    return {
+        **state,
+        "final_prompt": final_prompt,
+        "step": "human_reviewed"
+    }
+
+
+def answer_prompt_node(state: PromptState) -> PromptState:
+    """
+    Use the LLM to generate a final answer based on the approved prompt.
+    """
+    print(f"🤖 Generating final answer with Ollama for: {state['final_prompt']}")
+
+    # Define a helpful persona for the final response generation
+    system_message = """You are a helpful AI assistant. Provide a comprehensive, well-structured answer to the user's prompt. Be thorough, accurate, and helpful. Format your response clearly with proper structure."""
+
+    # Generate the final answer
+    final_answer = call_llm(state['final_prompt'], system_message)
+
+    # Update the state with the final answer
+    return {
+        **state,
+        "final_answer": final_answer,
+        "step": "completed"
+    }
+
+
+################################ Graph Definition & Compilation ################################
+
+def create_app():
+    """Create and compile the LangGraph application."""
+
+    # Initialize a new state graph
+    builder = StateGraph(PromptState)
+
+    # Add the defined functions as nodes in the graph
+    builder.add_node("improve_prompt", improve_prompt_node)
+    builder.add_node("human_review", human_review_node)
+    builder.add_node("answer_prompt", answer_prompt_node)
+
+    # Define the execution flow by connecting the nodes with edges
+    builder.add_edge(START, "improve_prompt")
+    builder.add_edge("improve_prompt", "human_review")
+    builder.add_edge("human_review", "answer_prompt")
+    builder.add_edge("answer_prompt", END)
+
+    # Set up an in-memory checkpointer to save state and support interruption
+    checkpointer = InMemorySaver()
+
+    # Compile the graph into a runnable application
+    app = builder.compile(checkpointer=checkpointer)
+
+    return app
+
+
+################################ Application Execution ################################
+
+def interactive_run():
+    """Run an interactive console session for the Human-in-the-Loop app."""
+
+    app = create_app()
+    # Create a unique thread ID to manage conversation state
+    config = {"configurable": {"thread_id": str(uuid.uuid4())}}
+
+    # Get the initial prompt from the user
+    user_prompt = input("Enter your prompt: ").strip()
+    if not user_prompt:
+        user_prompt = "Tell me about machine learning" # Use a default prompt if none is provided
+
+    # Define the initial state to start the graph
+    initial_state = {
+        "original_prompt": user_prompt,
+        "step": "starting"
+    }
+
+    print(f"\n🚀 Processing with Ollama: {user_prompt}")
+    print("-" * 50)
+
+    # Start the graph execution, which will run until an interrupt is encountered
+    result = app.invoke(initial_state, config=config)
+
+    # Check if the graph was interrupted for human review
+    if "__interrupt__" in result:
+        interrupt_data = result["__interrupt__"][0].value
+
+        print(f"\n📝 Original prompt: {interrupt_data['original_prompt']}")
+        print(f"🔧 Improved prompt: {interrupt_data['improved_prompt']}")
+        print(f"\n{interrupt_data['task']}")
+
+        # Get input from the human reviewer
+        print("\nOptions:")
+        print("1. Press Enter to approve as-is")
+        print("2. Type a new version to edit")
+        user_input = input("\nYour choice: ").strip()
+
+        # Prepare the response payload based on user input
+        if user_input:
+            human_response = {"action": "edit", "edited_prompt": user_input}
+        else:
+            human_response = {"action": "approve"}
+
+        # Resume the graph execution with the human's feedback
+        print("\n🤖 Generating final answer with Ollama...")
+        final_result = app.invoke(Command(resume=human_response), config=config)
+
+        # Print the final results of the completed graph run
+        print("\n" + "=" * 50)
+        print("📊 RESULTS")
+        print("=" * 50)
+        print(f"Final prompt: {final_result['final_prompt']}")
+        print(f"\n🎯 Answer:\n{final_result['final_answer']}")
+
+
+# Define the main entry point for the script
+if __name__ == "__main__":
+    print("🚀 Advanced Human-in-the-Loop LangGraph App with Ollama")
+    interactive_run()
