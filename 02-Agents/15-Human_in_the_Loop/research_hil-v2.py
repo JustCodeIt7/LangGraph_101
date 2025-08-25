@@ -9,15 +9,12 @@ from langchain_core.messages import HumanMessage, AIMessage
 from pydantic.v1 import BaseModel, Field  # Updated import to fix deprecation warning
 import getpass
 
-# Set your OpenAI API key
-
-
 # Define the state
 class ResearchState(TypedDict):
     prompt: str
     plan: str
     approved: bool
-    research_results: str
+    final_report: str
     messages: Annotated[List[Dict[str, str]], "append"]
 
 # LLM setup
@@ -27,9 +24,14 @@ llm = ChatOllama(model="llama3.2", temperature=0.7)
 def generate_plan(state: ResearchState) -> ResearchState:
     prompt_template = PromptTemplate(
         input_variables=["prompt"],
-        template="Create a detailed research plan for the following prompt: {prompt}. "
-                 "The plan should include steps like: 1. Key questions to answer. "
-                 "2. Sources to consult. 3. Methods for gathering information."
+        template=(
+            "Create a detailed research plan for the following prompt: {prompt}.\n"
+            "The plan should include:\n"
+            "1) Key questions to answer\n"
+            "2) Sources to consult\n"
+            "3) Methods for gathering information\n"
+            "4) A proposed outline for the final report\n"
+        )
     )
     chain = prompt_template | llm
     response = chain.invoke({"prompt": state["prompt"]})
@@ -44,7 +46,7 @@ def human_approval(state: ResearchState) -> ResearchState:
     print(state["plan"])
     print("\nApprove (y), Edit (e), or Reject (n)?")
     user_input = input().strip().lower()
-    
+
     if user_input == "y":
         return {"approved": True, "messages": [{"role": "human", "content": "Approved"}]}
     elif user_input == "e":
@@ -58,28 +60,40 @@ def human_approval(state: ResearchState) -> ResearchState:
     else:
         return {"approved": False, "messages": [{"role": "human", "content": "Rejected"}]}
 
-# Node 3: Perform Research
-class ResearchOutput(BaseModel):
-    results: str = Field(description="The research findings based on the plan.")
+# Node 3: Write Final Report (no actual research performed)
+class ReportOutput(BaseModel):
+    report: str = Field(description="The final report text generated solely from the plan and prompt.")
 
-def perform_research(state: ResearchState) -> ResearchState:
+def write_report(state: ResearchState) -> ResearchState:
     prompt_template = PromptTemplate(
         input_variables=["prompt", "plan"],
-        template="Perform research on the prompt: {prompt} following this plan: {plan}. "
-                 "Summarize the key findings."
+        template=(
+            "You are a professional report writer. Do not perform any external research.\n"
+            "Write the final report entirely based on the approved plan and the prompt.\n\n"
+            "Prompt:\n{prompt}\n\n"
+            "Approved Plan:\n{plan}\n\n"
+            "Instructions:\n"
+            "- Use the plan's outline and key questions to structure the report.\n"
+            "- Synthesize and expand the plan into a clear, cohesive, and well-argued report.\n"
+            "- If the plan references sources, include them as placeholders (e.g., [Source Placeholder]) "
+            "without fabricating citations.\n"
+            "- Include an executive summary, main sections following the plan, and a brief conclusion.\n"
+            "- Keep the tone professional and concise.\n\n"
+            "Now write the final report:"
+        )
     )
-    structured_llm = llm.with_structured_output(ResearchOutput)
+    structured_llm = llm.with_structured_output(ReportOutput)
     chain = prompt_template | structured_llm
     response = chain.invoke({"prompt": state["prompt"], "plan": state["plan"]})
     return {
-        "research_results": response.results,
-        "messages": [{"role": "assistant", "content": f"Research results: {response.results}"}]
+        "final_report": response.report,
+        "messages": [{"role": "assistant", "content": f"Final report generated."}]
     }
 
 # Conditional edge: Check approval
 def check_approval(state: ResearchState) -> str:
     if state["approved"]:
-        return "perform_research"
+        return "write_report"
     else:
         return END
 
@@ -88,7 +102,7 @@ workflow = StateGraph(ResearchState)
 
 workflow.add_node("generate_plan", generate_plan)
 workflow.add_node("human_approval", human_approval)
-workflow.add_node("perform_research", perform_research)
+workflow.add_node("write_report", write_report)
 
 workflow.set_entry_point("generate_plan")
 workflow.add_edge("generate_plan", "human_approval")
@@ -96,11 +110,11 @@ workflow.add_conditional_edges(
     "human_approval",
     check_approval,
     {
-        "perform_research": "perform_research",
+        "write_report": "write_report",
         END: END
     }
 )
-workflow.add_edge("perform_research", END)
+workflow.add_edge("write_report", END)
 
 # Compile the graph with memory
 memory = MemorySaver()
@@ -112,23 +126,22 @@ def run_research_app(research_prompt: str):
         prompt=research_prompt,
         plan="",
         approved=False,
-        research_results="",
+        final_report="",
         messages=[]
     )
-    
+
     # Run until human approval node
     config = {"configurable": {"thread_id": "research_thread"}}
     app.invoke(initial_state, config=config)
-    
+
     # Now, resume after human input
-    # In a real app, this would be in a loop or handled differently, but for simplicity:
     print("Resuming after human input...")
     app.invoke(None, config=config)  # Resume from checkpoint
-    
+
     # Get final state
     final_checkpoint = app.get_state(config)
-    print("\nFinal Research Results:\n")
-    print(final_checkpoint.values["research_results"])
+    print("\nFinal Report:\n")
+    print(final_checkpoint.values["final_report"])
 
 # Example usage
 if __name__ == "__main__":
