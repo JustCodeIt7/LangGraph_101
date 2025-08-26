@@ -55,6 +55,8 @@ def manager(state: CustomerServiceState):
     return {'status': 'completed', 'resolution': resolution}
 
 
+# %%
+
 # Build the simplified graph
 builder = StateGraph(CustomerServiceState)
 builder.add_edge(START, 'router')
@@ -81,6 +83,7 @@ result1 = graph.invoke(
     }
 )
 print(result1)
+# %%
 
 print('\n=== Example 2: Urgent Issue ===')
 result2 = graph.invoke(
@@ -93,7 +96,7 @@ result2 = graph.invoke(
     }
 )
 print(result2)
-
+# %%
 print('\n=== Example 3: Critical Issue ===')
 result3 = graph.invoke(
     {
