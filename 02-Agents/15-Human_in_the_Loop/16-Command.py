@@ -1,148 +1,80 @@
 # %%
-import random
 from typing_extensions import TypedDict, Literal
 from langgraph.graph import StateGraph, START
 from langgraph.types import Command
 from IPython.display import display, Image
 
 # %%
+# Simplified customer service workflow with Command routing
 
 
-# Define graph state for customer service workflow
+# Define simplified graph state
 class CustomerServiceState(TypedDict):
     customer_id: str
-    issue_type: str
     issue_description: str
     priority: str
     status: str
     resolution: str
 
 
-# Define the nodes
+# Simplified routing function
+def router(state: CustomerServiceState) -> Command[Literal['support_agent', 'manager']]:
+    print('Called Router')
 
-
-def triage_agent(state: CustomerServiceState) -> Command[Literal['billing_agent', 'technical_agent', 'general_agent']]:
-    print('Called Triage Agent')
-    # Analyze the issue type and route to appropriate specialist
+    # Simple routing logic based on keywords
     issue_keywords = state['issue_description'].lower()
 
-    if 'bill' in issue_keywords or 'payment' in issue_keywords or 'refund' in issue_keywords:
-        goto = 'billing_agent'
-        priority = 'high' if 'urgent' in issue_keywords else 'medium'
-    elif 'technical' in issue_keywords or 'error' in issue_keywords or 'bug' in issue_keywords:
-        goto = 'technical_agent'
-        priority = 'high' if 'critical' in issue_keywords else 'medium'
+    if 'urgent' in issue_keywords or 'critical' in issue_keywords or 'refund' in issue_keywords:
+        # High priority issues go to manager
+        priority = 'high'
+        goto = 'manager'
+        status = 'escalated'
     else:
-        goto = 'general_agent'
-        priority = 'low'
+        # Standard issues go to support agent
+        priority = 'medium'
+        goto = 'support_agent'
+        status = 'assigned'
 
-    # Update state with priority and route to next node
     return Command(
-        update={'priority': priority, 'status': 'triaged'},
+        update={'priority': priority, 'status': status},
         goto=goto,
     )
 
 
-def billing_agent(state: CustomerServiceState) -> Command[Literal['escalate_manager', 'resolve_issue']]:
-    print('Called Billing Agent')
-    # Handle billing-related issues
-    issue_description = state['issue_description'].lower()
-
-    if 'refund' in issue_description and state['priority'] == 'high':
-        # High priority refund requests need manager approval
-        resolution = 'Refund request escalated to manager for approval'
-        goto = 'escalate_manager'
-    else:
-        # Standard billing issues can be resolved directly
-        resolution = 'Billing issue resolved with standard procedure'
-        goto = 'resolve_issue'
-
-    return Command(
-        update={'status': 'processed', 'resolution': resolution},
-        goto=goto,
-    )
+def support_agent(state: CustomerServiceState):
+    print('Called Support Agent')
+    # Support agent handles standard issues
+    resolution = f'Support agent resolved: {state["issue_description"]}'
+    return {'status': 'completed', 'resolution': resolution}
 
 
-def technical_agent(state: CustomerServiceState) -> Command[Literal['escalate_manager', 'resolve_issue']]:
-    print('Called Technical Agent')
-    # Handle technical issues
-    issue_description = state['issue_description'].lower()
-
-    if 'critical' in issue_description or 'system down' in issue_description:
-        # Critical technical issues need escalation
-        resolution = 'Critical technical issue escalated to engineering team'
-        goto = 'escalate_manager'
-    else:
-        # Standard technical issues
-        resolution = 'Technical issue resolved with troubleshooting steps'
-        goto = 'resolve_issue'
-
-    return Command(
-        update={'status': 'processed', 'resolution': resolution},
-        goto=goto,
-    )
-
-
-def general_agent(state: CustomerServiceState) -> Command[Literal['escalate_manager', 'resolve_issue']]:
-    print('Called General Agent')
-    # Handle general inquiries
-    issue_description = state['issue_description'].lower()
-
-    if 'complaint' in issue_description or 'unhappy' in issue_description:
-        # Customer complaints need manager attention
-        resolution = 'Customer complaint escalated to manager'
-        goto = 'escalate_manager'
-    else:
-        # General inquiries can be resolved
-        resolution = 'General inquiry resolved with information provided'
-        goto = 'resolve_issue'
-
-    return Command(
-        update={'status': 'processed', 'resolution': resolution},
-        goto=goto,
-    )
-
-
-def escalate_manager(state: CustomerServiceState):
-    print('Called Escalate Manager')
+def manager(state: CustomerServiceState):
+    print('Called Manager')
     # Manager handles escalated issues
-    resolution = f'Manager resolved escalated issue: {state["resolution"]}'
-    return {'status': 'resolved', 'resolution': resolution}
+    resolution = f'Manager resolved high-priority issue: {state["issue_description"]}'
+    return {'status': 'completed', 'resolution': resolution}
 
 
-def resolve_issue(state: CustomerServiceState):
-    print('Called Resolve Issue')
-    # Final resolution step
-    return {'status': 'completed', 'resolution': f'Issue resolved: {state["resolution"]}'}
-
-
-# %% [markdown]
-# This is a markdown cell explaining the customer service workflow
-# %%
+# Build the simplified graph
 builder = StateGraph(CustomerServiceState)
-builder.add_edge(START, 'triage_agent')
-builder.add_node(triage_agent)
-builder.add_node(billing_agent)
-builder.add_node(technical_agent)
-builder.add_node(general_agent)
-builder.add_node(escalate_manager)
-builder.add_node(resolve_issue)
-# NOTE: there are no edges between nodes except from START to triage_agent!
+builder.add_edge(START, 'router')
+builder.add_node(router)
+builder.add_node(support_agent)
+builder.add_node(manager)
 
 graph = builder.compile()
 
+# Display the graph
 display(Image(graph.get_graph().draw_mermaid_png()))
 
-# %% [markdown]
-# This is another markdown cell showing example invocations
 # %%
-# Example 1: Billing issue
-print('=== Example 1: Billing Issue ===')
+# Test examples
+
+print('=== Example 1: Standard Issue ===')
 result1 = graph.invoke(
     {
         'customer_id': 'cust123',
-        'issue_type': 'billing',
-        'issue_description': 'I have an urgent question about my recent bill',
+        'issue_description': 'I need help with my account settings',
         'priority': '',
         'status': 'new',
         'resolution': '',
@@ -150,13 +82,11 @@ result1 = graph.invoke(
 )
 print(result1)
 
-# Example 2: Technical issue
-print('\n=== Example 2: Technical Issue ===')
+print('\n=== Example 2: Urgent Issue ===')
 result2 = graph.invoke(
     {
         'customer_id': 'cust456',
-        'issue_type': 'technical',
-        'issue_description': 'I encountered a critical error in the system',
+        'issue_description': 'Urgent: I need a refund for my recent purchase',
         'priority': '',
         'status': 'new',
         'resolution': '',
@@ -164,113 +94,16 @@ result2 = graph.invoke(
 )
 print(result2)
 
-# Example 3: General inquiry
-print('\n=== Example 3: General Inquiry ===')
+print('\n=== Example 3: Critical Issue ===')
 result3 = graph.invoke(
     {
         'customer_id': 'cust789',
-        'issue_type': 'general',
-        'issue_description': 'I need information about your services',
+        'issue_description': 'Critical system error preventing me from logging in',
         'priority': '',
         'status': 'new',
         'resolution': '',
     }
 )
 print(result3)
-
-
-# %% [markdown]
-# Navigate to a node in a parent graph with subgraph example
-# %%
-def escalation_node(state: CustomerServiceState) -> Command[Literal['manager_review']]:
-    return Command(
-        update={'status': 'escalated', 'resolution': 'Issue requires manager review'},
-        goto='manager_review',  # where 'manager_review' is a node in the parent graph
-        graph=Command.PARENT,
-    )
-
-
-# %%
-import operator
-from typing_extensions import Annotated
-
-
-class SubgraphState(TypedDict):
-    # NOTE: we define a reducer here to accumulate resolution steps
-    resolution_steps: Annotated[list[str], operator.add]
-    final_resolution: str
-
-
-def initial_triage(state: SubgraphState) -> Command[Literal['specialist_agent', 'escalate_node']]:
-    print('Called Initial Triage in Subgraph')
-    # Randomly decide if we need escalation or can handle with specialist
-    needs_escalation = random.choice([True, False])
-
-    if needs_escalation:
-        goto = 'escalate_node'
-        resolution_step = 'Issue identified as requiring escalation'
-    else:
-        goto = 'specialist_agent'
-        resolution_step = 'Issue routed to specialist agent'
-
-    return Command(
-        update={'resolution_steps': [resolution_step]},
-        goto=goto,
-        # This tells LangGraph to navigate to the specified node in the parent graph
-        graph=Command.PARENT,
-    )
-
-
-def specialist_agent(state: SubgraphState):
-    print('Called Specialist Agent in Subgraph')
-    resolution_step = 'Specialist agent processed the issue'
-    return {'resolution_steps': [resolution_step], 'final_resolution': 'Issue resolved by specialist'}
-
-
-# Create the subgraph
-subgraph = (
-    StateGraph(SubgraphState)
-    .add_node(initial_triage)
-    .add_node(specialist_agent)
-    .add_edge(START, 'initial_triage')
-    .compile()
-)
-
-
-def manager_review(state: CustomerServiceState):
-    print('Called Manager Review in Parent Graph')
-    resolution = f'Manager reviewed and resolved: {state["resolution"]}'
-    return {'status': 'resolved', 'resolution': resolution}
-
-
-def customer_service_agent(state: CustomerServiceState):
-    print('Called Customer Service Agent in Parent Graph')
-    resolution = 'Customer service agent handled the inquiry'
-    return {'status': 'resolved', 'resolution': resolution}
-
-
-# Build the parent graph
-builder = StateGraph(CustomerServiceState)
-builder.add_edge(START, 'subgraph')
-builder.add_node('subgraph', subgraph)
-builder.add_node(manager_review)
-builder.add_node(customer_service_agent)
-
-parent_graph = builder.compile()
-
-# %%
-# Test the parent graph with subgraph
-print('\n=== Testing Parent Graph with Subgraph ===')
-result = parent_graph.invoke(
-    {
-        'customer_id': 'cust999',
-        'issue_type': 'complex',
-        'issue_description': 'Complex issue requiring subgraph processing',
-        'priority': 'high',
-        'status': 'new',
-        'resolution': '',
-    }
-)
-print(result)
 
 # %%
