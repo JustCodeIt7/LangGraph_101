@@ -1,3 +1,4 @@
+# %%
 import os
 from typing import Literal
 from typing_extensions import TypedDict
@@ -6,11 +7,10 @@ from langgraph.graph import StateGraph, START, END
 from langgraph.types import Command, interrupt
 from langgraph.checkpoint.memory import InMemorySaver
 from IPython.display import Image, display
-
-# To make the output look nice
-os.environ['LANGCHAIN_LOG'] = 'error'
+from rich import print
 
 
+# %%
 ################################ 1. State Definition ################################
 # This is the shared state that all nodes in our graph will have access to and can modify.
 class WorkflowState(TypedDict):
@@ -21,6 +21,7 @@ class WorkflowState(TypedDict):
     status: str
 
 
+# %%
 ################################ 2. Node Definitions ################################
 # Each function below represents a "node" or a step in our graph.
 
@@ -69,6 +70,7 @@ def cancel_task(state: WorkflowState):
     return {'status': 'canceled'}
 
 
+# %%
 ################################ 3. Graph Construction ################################
 
 # Initialize an in-memory checkpointer. This is required for 'interrupt' to work,
@@ -97,14 +99,17 @@ builder.add_edge('cancel_task', END)
 # Compile the graph, enabling the checkpointer.
 graph = builder.compile(checkpointer=memory)
 
+# The complete_task and cancel_task nodes appear disconnected in the visualization because their connection to the graph is dynamic, not static. The routing decision is made at runtime by the router node using the Command object.
+
 # You can visualize the graph structure.
 # Notice the router doesn't have explicit paths leading out of it.
 try:
     display(Image(graph.get_graph().draw_mermaid_png()))
+    # print(graph.get_graph().draw_mermaid())
 except Exception as e:
     print(f'Could not display graph: {e}')
 
-
+# %%
 ########################## 4. Graph Execution & Interaction ##########################
 
 # --- Run 1: Approve the task ---
@@ -125,7 +130,7 @@ print("\n... Resuming Run 1 with 'approve' ...\n")
 for event in graph.stream(Command(resume='approve'), thread, stream_mode='values'):
     print(f'\n[STREAM EVENT]:\n{event}\n')
 
-
+# %%
 # --- Run 2: Reject the task ---
 print('\n' + '=' * 50 + '\n🚀 STARTING RUN 2: REJECTION\n' + '=' * 50)
 
@@ -140,3 +145,5 @@ for event in graph.stream(initial_task, thread2, stream_mode='values'):
 print("\n... Resuming Run 2 with 'reject' ...\n")
 for event in graph.stream(Command(resume='reject'), thread2, stream_mode='values'):
     print(f'\n[STREAM EVENT]:\n{event}\n')
+
+# %%
