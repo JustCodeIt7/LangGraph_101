@@ -19,21 +19,23 @@ class AppState(TypedDict):
 # %%
 # Route the workflow based on the content of the user input.
 def router(state: AppState) -> Command[Literal['handle_positive', 'handle_negative']]:
-    print('---' + 'ROUTER' + '---')
+    print('\n🔀 ROUTER')
+    print(f"   Input: '{state['user_input']}'")
     # Check for a keyword in the input to determine the execution path.
     if 'positive' in state['user_input'].lower():
-        print('Input is positive, routing to handle_positive.')
+        print('   ✅ Detected positive input → routing to handle_positive')
         # Use Command to dynamically direct the graph to the next node.
         return Command(goto='handle_positive')
     else:
-        print('Input is not positive, routing to handle_negative.')
+        print('   ❌ No positive keyword found → routing to handle_negative')
         return Command(goto='handle_negative')
 
 
 # Handle the "positive" branch of the graph's logic.
 def handle_positive(state: AppState) -> Command[Literal['finish']]:
-    print('---' + 'POSITIVE HANDLER' + '---')
+    print('\n✨ POSITIVE HANDLER')
     result = 'Processed the positive case successfully.'
+    print(f'   Result: {result}')
     # Update the shared state and specify the next node to execute.
     return Command(
         update={'result': result, 'status': 'processed'},
@@ -43,8 +45,9 @@ def handle_positive(state: AppState) -> Command[Literal['finish']]:
 
 # Handle the "negative" branch of the graph's logic.
 def handle_negative(state: AppState) -> Command[Literal['finish']]:
-    print('---' + 'NEGATIVE HANDLER' + '---')
+    print('\n🔄 NEGATIVE HANDLER')
     result = 'Processed the negative case successfully.'
+    print(f'   Result: {result}')
     # Update the shared state and specify the next node to execute.
     return Command(
         update={'result': result, 'status': 'processed'},
@@ -54,7 +57,9 @@ def handle_negative(state: AppState) -> Command[Literal['finish']]:
 
 # Define the terminal node that concludes the graph's execution.
 def finish(state: AppState):
-    print('---' + 'FINISH' + '---')
+    print('\n🏁 FINISH')
+    print(f'   Final result: {state["result"]}')
+    print('   Status: completed')
     # Perform a final state update.
     return {'status': 'completed'}
 
@@ -89,15 +94,19 @@ except Exception as e:
 # --- Run the graph with different inputs ---
 
 # Execute the graph with an input that triggers the positive path.
-print('=== Example 1: Positive Input ===')
+print('\n' + '=' * 50)
+print('📝 EXAMPLE 1: Positive Input')
+print('=' * 50)
 positive_input = {'user_input': 'This is a positive statement.'}
-result1 = graph.invoke(positive_input)
-print(f'Final State: {result1}')
+result1 = graph.invoke(positive_input, debug=True)
+print(f'\n📋 Final State: {result1}')
 # %%
 # Execute the graph with an input that triggers the negative path.
-print('=== Example 2: Negative Input ===')
+print('\n' + '=' * 50)
+print('📝 EXAMPLE 2: Negative Input')
+print('=' * 50)
 negative_input = {'user_input': 'This is a different statement.'}
-result2 = graph.invoke(negative_input)
-print(f'Final State: {result2}')
+result2 = graph.invoke(negative_input, debug=True)
+print(f'\n📋 Final State: {result2}')
 
 # %%

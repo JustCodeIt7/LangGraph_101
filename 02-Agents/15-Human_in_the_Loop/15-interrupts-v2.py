@@ -10,7 +10,7 @@ from langgraph.graph import StateGraph, START, END
 from langgraph.types import Command, interrupt
 from langgraph.checkpoint.memory import InMemorySaver
 from IPython.display import Image, display
-
+from rich import print
 # %% [markdown]
 # ## Define State
 
@@ -206,16 +206,16 @@ thread = {'configurable': {'thread_id': 'approval-1'}}
 # Run the graph for small request
 print('=== Testing Small Request ===')
 # In a real notebook, you would run this and then continue after interrupts
-# for event in approval_graph.stream(small_request, thread, stream_mode="updates"):
-#     print(f"Event: {event}")
-#     print()
+for event in approval_graph.stream(small_request, thread, stream_mode='updates'):
+    print(f'Event: {event}')
+    print()
 
 print('\n=== Testing Large Request ===')
 # Run the graph for large request
-# thread2 = {"configurable": {"thread_id": "approval-2"}}
-# for event in approval_graph.stream(large_request, thread2, stream_mode="updates"):
-#     print(f"Event: {event}")
-#     print()
+thread2 = {'configurable': {'thread_id': 'approval-2'}}
+for event in approval_graph.stream(large_request, thread2, stream_mode='updates'):
+    print(f'Event: {event}')
+    print()
 
 # To continue after interrupt, you would use:
 # approval_graph.stream(Command(resume="approved"), thread, stream_mode="updates")

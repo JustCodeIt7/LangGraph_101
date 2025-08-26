@@ -1,3 +1,4 @@
+# %%
 from typing_extensions import TypedDict, NotRequired
 from datetime import datetime
 import re
@@ -223,3 +224,5 @@ thread2 = {'configurable': {'thread_id': 'post-2'}}
 for event in graph.stream(safe_input, thread2, stream_mode='values'):
     print(event)
     print()
+
+# %%
