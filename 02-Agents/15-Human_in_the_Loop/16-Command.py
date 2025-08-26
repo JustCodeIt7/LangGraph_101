@@ -135,4 +135,28 @@ result5 = graph.invoke(
 )
 print(result5)
 
+print('\n=== Example 6: Feature Request ===')
+result6 = graph.invoke(
+    {
+        'customer_id': 'cust303',
+        'issue_description': 'I would love a dark mode feature in the app',
+        'priority': '',
+        'status': 'new',
+        'resolution': '',
+    }
+)
+print(result6)
+
+print('\n=== Example 7: Refund Requested (Non-urgent) ===')
+result7 = graph.invoke(
+    {
+        'customer_id': 'cust404',
+        'issue_description': 'I am requesting a refund for an accidental duplicate order',
+        'priority': '',
+        'status': 'new',
+        'resolution': '',
+    }
+)
+print(result7)
+
 # %%

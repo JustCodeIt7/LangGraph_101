@@ -4,6 +4,7 @@ from typing_extensions import TypedDict, Literal
 from langgraph.graph import StateGraph, START
 from langgraph.types import Command
 from IPython.display import display, Image
+from rich import print
 # %%
 ################################ State & Node Definitions ################################
 
@@ -92,9 +93,11 @@ print('=== Example 1: Positive Input ===')
 positive_input = {'user_input': 'This is a positive statement.'}
 result1 = graph.invoke(positive_input)
 print(f'Final State: {result1}')
-
+# %%
 # Execute the graph with an input that triggers the negative path.
 print('=== Example 2: Negative Input ===')
 negative_input = {'user_input': 'This is a different statement.'}
 result2 = graph.invoke(negative_input)
 print(f'Final State: {result2}')
+
+# %%
