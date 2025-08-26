@@ -110,3 +110,29 @@ result3 = graph.invoke(
 print(result3)
 
 # %%
+print('\n=== Example 4: Billing Inquiry ===')
+result4 = graph.invoke(
+    {
+        'customer_id': 'cust101',
+        'issue_description': 'I have questions about my monthly billing statement',
+        'priority': '',
+        'status': 'new',
+        'resolution': '',
+    }
+)
+print(result4)
+
+# %%
+print('\n=== Example 5: Urgent Password Reset ===')
+result5 = graph.invoke(
+    {
+        'customer_id': 'cust202',
+        'issue_description': 'Urgent: I cannot reset my password and need immediate access',
+        'priority': '',
+        'status': 'new',
+        'resolution': '',
+    }
+)
+print(result5)
+
+# %%
