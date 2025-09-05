@@ -4,15 +4,28 @@
 
 # %%
 
+# ================================
+# IMPORTS AND SETUP
+# ================================
+# All imports consolidated at the top
+import os
+from typing import Annotated, Any, Literal, TypedDict
+
+from langchain_core.messages import AIMessage, AnyMessage, HumanMessage, ToolMessage
+from langchain_ollama import ChatOllama, OllamaEmbeddings
+from langgraph.checkpoint.memory import MemorySaver
+from langgraph.graph import END, MessageGraph, MessagesState, START, StateGraph
+from langgraph.prebuilt import ToolNode
+from langgraph.types import Command
+
+llm = ChatOllama(model='llama3.2')
+embedding = OllamaEmbeddings(model='nomic-embed-text')
+# ================================
+# SECTION 1: BASIC SUPERVISOR ARCHITECTURE
+# ================================
+# Simple supervisor with research and math agents
 
 # %%
-import os
-from typing import Literal
-
-from langchain_core.messages import AnyMessage, HumanMessage
-from langgraph.checkpoint.memory import MemorySaver
-from langgraph.graph import END, MessageGraph
-from langgraph.prebuilt import ToolNode
 
 
 # This is a placeholder for a real tool; in a real app, you would use something like Tavily
@@ -66,15 +79,13 @@ for chunk in graph.stream([HumanMessage(content='What is 1 + 1?')], config=confi
 # %% [markdown]
 # #### Example 1: Supervisor Architecture (with ChatOllama)
 
+# ================================
+# SECTION 2: SUPERVISOR ARCHITECTURE WITH CHATOLLAMA
+# ================================
+# Enhanced supervisor using LLM for routing decisions
+
 # %%
 # pip install langgraph langchain langchain-ollama
-from langchain_core.messages import AIMessage, HumanMessage
-from langchain_ollama import ChatOllama, OllamaEmbeddings
-from langgraph.graph import END, START, MessagesState, StateGraph
-from langgraph.types import Command
-
-llm = ChatOllama(model='llama3.2')
-embedding = OllamaEmbeddings(model='nomic-embed-text')
 
 
 class State(MessagesState):
@@ -132,13 +143,12 @@ for m in out['messages']:
 # %% [markdown]
 # ## 2. Network Architecture
 #
+# ================================
+# SECTION 3: NETWORK ARCHITECTURE
+# ================================
+# Agents that can route to any other agent in a collaborative network
 
 # %%
-from typing import Literal, TypedDict
-
-from langchain_core.messages import AIMessage, HumanMessage
-from langgraph.graph import MessagesState, StateGraph
-from langgraph.types import Command
 
 
 # Define our state schema
@@ -228,16 +238,21 @@ if __name__ == '__main__':
         print(f'{i + 1}. {message.content}')
         print()
 
+# ================================
+# SECTION 4: NETWORK ARCHITECTURE WITH TURNS
+# ================================
+# Sequential agent collaboration with turn-based routing
+
 # %%
 
+
+# ================================
+# SECTION 5: HIERARCHICAL ARCHITECTURE
+# ================================
+# Multi-level agent organization with teams and supervisors
 
 # %%
 # pip install langgraph langchain langchain-ollama
-from langchain_core.messages import AIMessage, HumanMessage
-from langchain_ollama import ChatOllama, OllamaEmbeddings
-from langgraph.graph import END, START, MessagesState, StateGraph
-from langgraph.types import Command
-
 llm = ChatOllama(model='llama3.2')
 embedding = OllamaEmbeddings(model='nomic-embed-text')
 
@@ -309,74 +324,13 @@ if __name__ == '__main__':
 # %% [markdown]
 # ## 3. Hierarchical Architecture
 #
-
-# %%
-from typing import Annotated, Any, Literal
-
-from langchain_core.messages import AnyMessage, HumanMessage, ToolMessage
-from langgraph.checkpoint.memory import MemorySaver
-from langgraph.graph import END, MessageGraph
-from typing_extensions import TypedDict
-
-
-# Define teams as subgraphs
-def research_node(messages: list[AnyMessage]):
-    print('---CALLING RESEARCH TEAM---')
-    # In a real app, this would be a more complex graph
-    return HumanMessage(content='LangGraph is a framework for building stateful, multi-agent applications.')
-
-
-def analysis_node(messages: list[AnyMessage]):
-    print('---CALLING ANALYSIS TEAM---')
-    # This team "analyzes" the research output
-    return HumanMessage(content=f'Analysis complete. Summary: {messages[-1].content}')
-
-
-research_team = MessageGraph()
-research_team.add_node('researcher', research_node)
-research_team.add_edge('researcher', END)
-research_graph = research_team.compile()
-
-analysis_team = MessageGraph()
-analysis_team.add_node('analyzer', analysis_node)
-analysis_team.add_edge('analyzer', END)
-analysis_graph = analysis_team.compile()
-
-
-# Top-level supervisor routes to the appropriate team
-def top_supervisor(messages: list[AnyMessage]) -> Literal['research_team', 'analysis_team', END]:
-    last_message = messages[-1]
-    if 'research' in last_message.content.lower():
-        return 'research_team'
-    # If the last message came from the research team, pass to analysis
-    if isinstance(last_message, HumanMessage) and 'LangGraph is a framework' in last_message.content:
-        return 'analysis_team'
-    return END
-
-
-# Build the final graph by composing the subgraphs
-graph_builder = MessageGraph()
-graph_builder.add_node('research_team', research_graph)
-graph_builder.add_node('analysis_team', analysis_graph)
-graph_builder.add_conditional_edges('__start__', top_supervisor)
-graph_builder.add_conditional_edges('research_team', top_supervisor)
-graph_builder.add_edge('analysis_team', END)
-graph = graph_builder.compile(checkpointer=MemorySaver())
-
-# Run the full hierarchy
-config = {'configurable': {'thread_id': '3'}}
-initial_message = [HumanMessage(content='Can you research LangGraph and then analyze the result?')]
-for chunk in graph.stream(initial_message, config=config):
-    print(chunk)
-
+# ================================
+# SECTION 6: HIERARCHICAL WITH SUBGRAPHS
+# ================================
+# Teams as subgraphs with top-level supervisor routing
 
 # %%
 # pip install langgraph langchain langchain-ollama
-from langchain_core.messages import AIMessage, HumanMessage
-from langchain_ollama import ChatOllama, OllamaEmbeddings
-from langgraph.graph import END, START, MessagesState, StateGraph
-from langgraph.types import Command
-
 llm = ChatOllama(model='llama3.2')
 embedding = OllamaEmbeddings(model='nomic-embed-text')
 
@@ -475,6 +429,16 @@ if __name__ == '__main__':
     for m in out['messages']:
         m.pretty_print()
 
+# ================================
+# SECTION 7: HIERARCHICAL WITH TEAMS
+# ================================
+# Research and Analysis teams with dedicated supervisors
+
+# ================================
+# SECTION 10: DUPLICATE - HIERARCHICAL WITH TEAMS
+# ================================
+# (Duplicate of Section 7 - Hierarchical with Teams)
+
 # %%
 from typing import Literal, TypedDict
 
@@ -592,17 +556,15 @@ if __name__ == '__main__':
     print('Analysis Task Result:')
     for message in result2['messages']:
         print(f'- {message.content}')
-
 # %% [markdown]
 # ## CC
 
-# %%
-from typing import Literal, TypedDict
+# ================================
+# SECTION 8: SUPERVISOR WITH WORKER AGENTS
+# ================================
+# Central supervisor routing to research and math worker agents
 
-from langchain_core.messages import AIMessage, HumanMessage
-from langgraph.graph import MessagesState, StateGraph
-from langgraph.graph.message import add_messages
-from langgraph.types import Command
+# %%
 
 
 # Define our state schema
@@ -677,12 +639,12 @@ if __name__ == '__main__':
     print('Math Query Result:')
     print(result2['messages'][-1].content)
 
-# %%
-from typing import Literal, TypedDict
+# ================================
+# SECTION 9: DUPLICATE - NETWORK ARCHITECTURE
+# ================================
+# (Duplicate of Section 3 - Network Architecture)
 
-from langchain_core.messages import AIMessage, HumanMessage
-from langgraph.graph import MessagesState, StateGraph
-from langgraph.types import Command
+# %%
 
 
 # Define our state schema
@@ -889,5 +851,3 @@ if __name__ == '__main__':
     print('Analysis Task Result:')
     for message in result2['messages']:
         print(f'- {message.content}')
-
-v
