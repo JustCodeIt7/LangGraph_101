@@ -1,17 +1,3 @@
-"""
-LangGraph Multi-Agent Parallel Processing with Different LLMs
-
-This example demonstrates how to use different language models for different agents
-running in parallel within a single LangGraph workflow:
-
-- Question Agent: Uses GPT-4o for generating thoughtful, complex questions
-- Joke Agent: Uses GPT-4o-mini for creative humor generation (more temperature)
-- Related Topics Agent: Uses GPT-3.5-turbo for balanced topic connections
-
-Each agent runs in parallel, utilizing the strengths of different models
-optimized for their specific tasks.
-"""
-
 import os
 from typing import TypedDict, List
 from langchain_openai import ChatOpenAI
