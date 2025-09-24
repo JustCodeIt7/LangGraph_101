@@ -81,7 +81,6 @@
 
 ### main_graph:
 <pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace">    +-----------+      
-
     | __start__ |      
     +-----------+      
           *            
