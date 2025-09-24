@@ -226,7 +226,7 @@ Plotly_Dash_Dashboards/01-Plotly_Basics_Charts/12-Sankey_Diagram/archive
 # ignore any starting with a dot
 .*/
 # Except for this one
-!/.github/
+# !/.github/
 .clinerules
 .roomodes
 core_architecture_standards_for_python.md

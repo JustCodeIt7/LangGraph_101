@@ -25,7 +25,15 @@
       "**/.github": true,
       "**/.kilocode": true,
       ".kilocode": true,
-      "**/.pytest_cache": true
+      "**/.pytest_cache": true,
+      ".ruff_cache": true,
+      ".virtual_documents": true,
+      "GEMINI.md": true,
+      "Makefile": true,
+      "LICENSE": true,
+      "langgraph.json": true,
+      "context_portal": true,
+      ".aiignore": true
     },
     "explorerExclude.backup": {},
     "python.testing.unittestArgs": [
@@ -38,5 +46,15 @@
     "python.testing.pytestEnabled": false,
     "python.testing.unittestEnabled": true,
     "claudeCodeChat.permissions.yoloMode": true,
-    "DockerRun.DisableAutoGenerateConfig": true
+    "DockerRun.DisableAutoGenerateConfig": true,
+    "hide-files.files": [
+      ".ruff_cache",
+      ".virtual_documents",
+      "GEMINI.md",
+      "Makefile",
+      "LICENSE",
+      "langgraph.json",
+      "context_portal",
+      ".aiignore"
+    ]
 }
