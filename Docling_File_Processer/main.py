@@ -1,9 +1,14 @@
 import streamlit as st
 import tempfile
 import zipfile
+import os
 from pathlib import Path
 from docling.document_converter import DocumentConverter
 import io
+
+# Set environment variables to prevent TensorFlow threading issues
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
 
 # Supported file types
 SUPPORTED_TYPES = ['.pdf', '.docx', '.doc', '.html', '.htm', '.pptx', '.ppt',
@@ -26,6 +31,12 @@ def create_zip(processed_files: list[tuple[str, str]]) -> bytes:
         for content, filename in processed_files:
             zip_file.writestr(filename, content)
     return zip_buffer.getvalue()
+
+def get_converter():
+    """Initialize and cache DocumentConverter in session state."""
+    if 'converter' not in st.session_state:
+        st.session_state.converter = DocumentConverter()
+    return st.session_state.converter
 
 def main():
     st.set_page_config(
@@ -70,7 +81,7 @@ def main():
         st.info(f"📁 {len(uploaded_files)} file(s) uploaded")
 
         if st.button("🚀 Process Files", type="primary"):
-            converter = DocumentConverter()
+            converter = get_converter()
             processed_files = []
             errors = []
 

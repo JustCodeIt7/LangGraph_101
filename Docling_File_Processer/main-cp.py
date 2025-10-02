@@ -10,21 +10,21 @@ from docling.document_converter import DocumentConverter
 
 # Supported suffixes are based on Docling's core formats and common text files.
 SUPPORTED_SUFFIXES = {
-    ".pdf",
-    ".docx",
-    ".doc",
-    ".pptx",
-    ".ppt",
-    ".xlsx",
-    ".xls",
-    ".rtf",
-    ".odt",
-    ".html",
-    ".htm",
-    ".md",
-    ".txt",
     ".csv",
+    ".doc",
+    ".docx",
     ".eml",
+    ".htm",
+    ".html",
+    ".md",
+    ".odt",
+    ".pdf",
+    ".ppt",
+    ".pptx",
+    ".rtf",
+    ".txt",
+    ".xls",
+    ".xlsx",
 }
 
 
@@ -83,14 +83,18 @@ def prepare_markdown_filename(source: Path) -> str:
     return f"{source}.md"
 
 
-def convert_folder(uploaded_files: Iterable["st.runtime.uploaded_file_manager.UploadedFile"], progress_bar) -> Tuple[io.BytesIO, List[str]]:
+def convert_folder(
+    uploaded_files: Iterable["st.runtime.uploaded_file_manager.UploadedFile"],
+    progress_bar,
+) -> Tuple[io.BytesIO, List[str], int]:
     """Convert multiple files and package the results into a ZIP archive."""
     errors: List[str] = []
     zip_buffer = io.BytesIO()
     files = list(uploaded_files)
+    converted_count = 0
 
     if not files:
-        return zip_buffer, ["No files were uploaded."]
+        return zip_buffer, ["No files were uploaded."], converted_count
 
     with tempfile.TemporaryDirectory() as temp_dir:
         with ZipFile(zip_buffer, "w", ZIP_DEFLATED) as archive:
@@ -103,19 +107,22 @@ def convert_folder(uploaded_files: Iterable["st.runtime.uploaded_file_manager.Up
                     local_path = write_temp_file(uploaded_file, temp_dir)
                     markdown = convert_path_to_markdown(local_path)
                     markdown_name = prepare_markdown_filename(Path(uploaded_file.name))
-                    archive.writestr(markdown_name, markdown)
+                    archive.writestr(markdown_name, markdown.encode("utf-8"))
+                    converted_count += 1
                 except UnsupportedFileTypeError as exc:
                     errors.append(f"{uploaded_file.name}: {exc}")
                 except ConversionFailureError as exc:
                     errors.append(f"{uploaded_file.name}: {exc}")
-                
+
                 progress_bar.progress(int((index / total) * 100), text=progress_text)
 
     zip_buffer.seek(0)
-    return zip_buffer, errors
+    return zip_buffer, errors, converted_count
 
 
-def convert_single_file(uploaded_file: "st.runtime.uploaded_file_manager.UploadedFile", progress_bar) -> Tuple[str, str]:
+def convert_single_file(
+    uploaded_file: "st.runtime.uploaded_file_manager.UploadedFile", progress_bar
+) -> Tuple[str, str]:
     """Convert a single uploaded file and return Markdown content and name."""
     progress_bar.progress(10, text="Saving file...")
     with tempfile.TemporaryDirectory() as temp_dir:
@@ -138,9 +145,7 @@ st.write(
 )
 
 with st.expander("Supported file types", expanded=False):
-    st.markdown(
-        ", ".join(sorted(SUPPORTED_SUFFIXES)).replace(", .", ", .")
-    )
+    st.markdown(", ".join(sorted(SUPPORTED_SUFFIXES)))
 
 upload_mode = st.radio(
     "Select how you want to upload",
@@ -195,14 +200,14 @@ elif upload_mode == "Folder of files" and uploaded_items:
 
     if convert_button:
         progress = st.progress(0, text="Preparing...")
-        zip_buffer, errors = convert_folder(uploaded_items, progress)
+        zip_buffer, errors, converted_count = convert_folder(uploaded_items, progress)
 
-        if zip_buffer.getbuffer().nbytes == 0:
+        if converted_count == 0:
             progress.empty()
             st.error("No files were converted. Check the error messages below.")
         else:
             progress.progress(100, text="Completed!")
-            st.success("Folder processed successfully.")
+            st.success(f"Converted {converted_count} file(s) successfully.")
             st.download_button(
                 "Download ZIP of Markdown files",
                 data=zip_buffer.getvalue(),

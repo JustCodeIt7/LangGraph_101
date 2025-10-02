@@ -14,19 +14,17 @@ Supported formats: PDF, DOCX, HTML, MD, TXT, etc.
 Docling will convert to Markdown. Progress shown during processing.
 """)
 
-converter = DocumentConverter()
-
 upload_type = st.radio('Choose upload type:', ('Single file', 'Multiple files or ZIP'))
 
 if upload_type == 'Single file':
     uploaded_file = st.file_uploader(
         'Choose a file', type=['pdf', 'docx', 'html', 'md', 'txt', 'doc', 'pptx', 'png', 'jpg', 'jpeg']
     )
-    if uploaded_file is not None:
-        try:
-            with st.spinner('Processing file...'):
-                buf = BytesIO(uploaded_file.read())
-                source = DocumentStream(name=uploaded_file.name, stream=buf)
+            if uploaded_file is not None:
+                try:
+                    with st.spinner('Processing file...'):
+                        converter = DocumentConverter()
+                        buf = BytesIO(uploaded_file.read())                source = DocumentStream(name=uploaded_file.name, stream=buf)
                 result = converter.convert(source)
                 if result.status == ConversionStatus.Success:
                     markdown_content = result.document.export_to_markdown()
@@ -48,6 +46,7 @@ else:
         type=['pdf', 'docx', 'html', 'md', 'txt', 'doc', 'pptx', 'png', 'jpg', 'jpeg', 'zip'],
     )
     if uploaded_files:
+        converter = DocumentConverter()
         markdown_files = {}
         progress_bar = st.progress(0)
         total_files = len(uploaded_files)
