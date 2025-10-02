@@ -3,7 +3,6 @@ import tempfile
 import zipfile
 from pathlib import Path
 from docling.document_converter import DocumentConverter
-import shutil
 import io
 
 # Supported file types
@@ -15,10 +14,10 @@ def process_file(file_path: Path, converter: DocumentConverter) -> tuple[str, st
     try:
         result = converter.convert(str(file_path))
         markdown_content = result.document.export_to_markdown()
-        output_filename = file_path.stem + '.md'
+        output_filename = f"{file_path.stem}.md"
         return markdown_content, output_filename
     except Exception as e:
-        raise Exception(f"Error processing {file_path.name}: {str(e)}")
+        raise Exception(f"Error processing {file_path.name}: {str(e)}") from e
 
 def create_zip(processed_files: list[tuple[str, str]]) -> bytes:
     """Create a ZIP file containing all processed markdown files."""
@@ -31,11 +30,11 @@ def create_zip(processed_files: list[tuple[str, str]]) -> bytes:
 def main():
     st.set_page_config(
         page_title="Docling File Processor",
-        page_icon="=Ä",
+        page_icon="ğŸ“„",
         layout="centered"
     )
 
-    st.title("=Ä Docling File Processor")
+    st.title("ğŸ“„ Docling File Processor")
     st.markdown("""
     Convert your documents to Markdown format using Docling.
 
@@ -68,9 +67,9 @@ def main():
         )
 
     if uploaded_files:
-        st.info(f"=Á {len(uploaded_files)} file(s) uploaded")
+        st.info(f"ğŸ“ {len(uploaded_files)} file(s) uploaded")
 
-        if st.button("=€ Process Files", type="primary"):
+        if st.button("ğŸš€ Process Files", type="primary"):
             converter = DocumentConverter()
             processed_files = []
             errors = []
@@ -94,9 +93,9 @@ def main():
                     try:
                         markdown_content, output_filename = process_file(temp_path, converter)
                         processed_files.append((markdown_content, output_filename))
-                        st.success(f" {uploaded_file.name} ’ {output_filename}")
+                        st.success(f"âœ… {uploaded_file.name} â†’ {output_filename}")
                     except Exception as e:
-                        errors.append(f"L {uploaded_file.name}: {str(e)}")
+                        errors.append(f"âŒ {uploaded_file.name}: {str(e)}")
                         st.error(errors[-1])
 
                 # Update progress
@@ -106,43 +105,43 @@ def main():
 
             # Display results
             if processed_files:
-                st.success(f"<‰ Successfully processed {len(processed_files)} file(s)")
+                st.success(f"ğŸ‰ Successfully processed {len(processed_files)} file(s)")
 
                 if len(processed_files) == 1:
                     # Single file - direct download
                     markdown_content, filename = processed_files[0]
                     st.download_button(
-                        label="=å Download Markdown File",
+                        label="ğŸ“¥ Download Markdown File",
                         data=markdown_content,
                         file_name=filename,
                         mime="text/markdown"
                     )
 
                     # Preview
-                    with st.expander("=Ö Preview Markdown"):
+                    with st.expander("ğŸ“– Preview Markdown"):
                         st.code(markdown_content, language="markdown")
                 else:
                     # Multiple files - ZIP download
                     zip_data = create_zip(processed_files)
                     st.download_button(
-                        label="=å Download ZIP File",
+                        label="ğŸ“¥ Download ZIP File",
                         data=zip_data,
                         file_name="processed_documents.zip",
                         mime="application/zip"
                     )
 
                     # Show file list
-                    with st.expander("=Ë Processed Files"):
+                    with st.expander("ğŸ“‹ Processed Files"):
                         for _, filename in processed_files:
-                            st.text(f" {filename}")
+                            st.text(f"âœ“ {filename}")
 
             if errors:
-                st.warning(f"  {len(errors)} file(s) failed to process")
-                with st.expander("L View Errors"):
+                st.warning(f"âš ï¸ {len(errors)} file(s) failed to process")
+                with st.expander("âŒ View Errors"):
                     for error in errors:
                         st.text(error)
     else:
-        st.info("=F Please upload file(s) to begin")
+        st.info("ğŸ‘† Please upload file(s) to begin")
 
     # Footer
     st.markdown("---")
