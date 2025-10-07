@@ -187,9 +187,11 @@ def create_stock_analysis_graph():
     workflow.add_edge('fetch_data', 'analyze_financials')
     workflow.add_edge('analyze_financials', 'generate_recommendation')
     workflow.add_edge('generate_recommendation', END)  # Mark the final node
-
+    app = workflow.compile()
+    # save the compiled graph for debugging
+    app.get_graph().draw_mermaid_png(output_file_path='agent_graph.png')
     # Compile the graph into a runnable object
-    return workflow.compile()
+    return app
 
 
 ################################ Streamlit UI ################################
