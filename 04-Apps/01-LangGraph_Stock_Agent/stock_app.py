@@ -14,11 +14,11 @@ import os
 load_dotenv()  # Load environment variables from .env file if present
 
 OLLAMA_BASE_URL = os.getenv('OLLAMA_BASE_URL', 'http://localhost:11434')
-MODEL_NAME = 'gpt-oss'
-# embedding = OllamaEmbeddings(model='nomic-embed-text')
+# MODEL_NAME = 'gpt-oss'
+MODEL_NAME = 'llama3.2'
 
-# llm = ChatOpenAI(model="gpt-4.1-nano", max_tokens=500)
-# embedding = OpenAIEmbeddings(model="text-embedding-3-small")
+llm = ChatOllama(model=MODEL_NAME, temperature=0.2, base_url=OLLAMA_BASE_URL)
+# llm = ChatOpenAI(model="gpt-5-nano",temperature=0.2)
 
 
 ################################ Data Fetching Functions ################################
@@ -97,7 +97,6 @@ class AgentState(TypedDict):
     recommendation: str
     messages: list
 
-
 def fetch_data_node(state: AgentState) -> AgentState:
     """Node 1: Fetch all required stock data from yfinance."""
     ticker = state['ticker']
@@ -114,8 +113,7 @@ def fetch_data_node(state: AgentState) -> AgentState:
 def analyze_financials_node(state: AgentState) -> AgentState:
     """Node 2: Use an LLM to analyze the collected financial data."""
     # Initialize the LLM for the analysis task
-    llm = ChatOllama(model=MODEL_NAME, temperature=0.2, base_url=OLLAMA_BASE_URL)
-
+    # llm = ChatOllama(model=MODEL_NAME, temperature=0.2, base_url=OLLAMA_BASE_URL)
     price_data = state['price_data']
     financial_data = state['financial_data']
 
@@ -138,7 +136,7 @@ def analyze_financials_node(state: AgentState) -> AgentState:
         2. Key trends and observations
         3. Strengths and weaknesses
 
-        Keep your analysis under 200 words.
+        Keep your analysis under 300 words. Return the analysis in markdown format.
         """
     # Invoke the LLM and update the state with the analysis
     state['analysis'] = llm.invoke(prompt).content
@@ -152,7 +150,6 @@ def generate_recommendation_node(state: AgentState) -> AgentState:
     # Initialize a separate LLM instance for the recommendation task
 
     # llm = ChatOllama(model='gpt-oss:latest', temperature=0.2, base_url=OLLAMA_BASE_URL)
-    llm = ChatOllama(model=MODEL_NAME, temperature=0.2, base_url=OLLAMA_BASE_URL)
     # Create a prompt that uses the prior analysis to generate a recommendation
     prompt = f"""
         Based on the following analysis for {state['ticker']}:
@@ -164,7 +161,7 @@ def generate_recommendation_node(state: AgentState) -> AgentState:
         2. Risk level (Low/Medium/High)
         3. Brief recommendation (Buy/Hold/Sell) with reasoning
 
-        Keep your recommendation under 100 words and be direct.
+        Keep your recommendation under 200 words and be direct. Return the recommendation in markdown format.
         """
     # Invoke the LLM and update the state with the recommendation
     state['recommendation'] = llm.invoke(prompt).content
@@ -207,7 +204,7 @@ def main():
 
     # Configure user inputs in the sidebar
     st.sidebar.header('⚙️ Configuration')
-    ticker = st.sidebar.text_input('Stock Ticker', value='AAPL').upper()
+    ticker = st.sidebar.text_input('Stock Ticker', value='INTC').upper()
     period = st.sidebar.radio('Financial Period', ['yearly', 'quarterly'])
     analyze_button = st.sidebar.button('🔍 Analyze Stock', type='primary')
 
@@ -235,7 +232,10 @@ def main():
             with st.expander('📋 Agent Progress Log'):
                 for msg in result['messages']:
                     st.write(msg)
-
+            
+            with st.expander('View Full Results:'):
+                st.write(result)
+            
             # Organize and display the results in separate tabs
             tab1, tab2, tab3, tab4 = st.tabs(['📊 Price Data', '💰 Financials', '🔍 Analysis', '💡 Recommendation'])
 

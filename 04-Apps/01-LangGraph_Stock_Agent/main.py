@@ -14,11 +14,11 @@ import os
 load_dotenv()  # Load environment variables from .env file if present
 
 OLLAMA_BASE_URL = os.getenv('OLLAMA_BASE_URL', 'http://localhost:11434')
-MODEL_NAME = 'gpt-oss'
-# embedding = OllamaEmbeddings(model='nomic-embed-text')
+# MODEL_NAME = 'gpt-oss'
+MODEL_NAME = 'llama3.2'
 
-# llm = ChatOpenAI(model="gpt-4.1-nano", max_tokens=500)
-# embedding = OpenAIEmbeddings(model="text-embedding-3-small")
+llm = ChatOllama(model=MODEL_NAME, temperature=0.2, base_url=OLLAMA_BASE_URL)
+# llm = ChatOpenAI(model="gpt-5-nano",temperature=0.2)
 
 
 ################################ Data Fetching Functions ################################
