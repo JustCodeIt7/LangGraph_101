@@ -2,7 +2,6 @@ from typing import TypedDict, List, Dict, Any
 from langgraph.graph import StateGraph, END
 from langchain_openai import ChatOpenAI
 from langchain.schema import HumanMessage
-import asyncio
 
 import os
 # Define the shared state
@@ -71,7 +70,7 @@ def writer_coordinator(state: ReportState) -> ReportState:
     sections = state['sections']
     section_drafts = {}
 
-    # Write each section (this could be parallelized with threading/asyncio if needed)
+    # Write each section
     for section_title in sections:
         section_content = write_section(section_title, topic)
         section_drafts[section_title] = section_content
@@ -93,29 +92,6 @@ def compiler_agent(state: ReportState) -> ReportState:
             final_report_content += f'## {section_title}\n\n{section_drafts[section_title]}\n\n'
 
     return {**state, 'final_report': final_report_content}
-
-
-# Alternative: Async version for true parallel execution
-async def write_section_async(section_title: str, topic: str) -> str:
-    """Async helper function to write a single section"""
-    return write_section(section_title, topic)
-
-
-async def writer_coordinator_async(state: ReportState) -> ReportState:
-    """Async coordinator for parallel section writing"""
-    topic = state['topic']
-    sections = state['sections']
-
-    # Create tasks for parallel execution
-    tasks = [write_section_async(section, topic) for section in sections]
-
-    # Execute all tasks in parallel
-    section_contents = await asyncio.gather(*tasks)
-
-    # Map results back to section titles
-    section_drafts = dict(zip(sections, section_contents))
-
-    return {**state, 'section_drafts': section_drafts}
 
 
 # --- Graph Construction ---
@@ -186,26 +162,6 @@ def generate_report(topic: str) -> str:
     """Generate a report using the sequential workflow."""
     initial_state = {'topic': topic, 'sections': [], 'section_drafts': {}, 'final_report': ''}
     result = app.invoke(initial_state, debug=True)
-    return result['final_report']
-
-
-async def generate_report_async(topic: str) -> str:
-    """Generate a report with parallel section writing."""
-    # Create async workflow
-    async_workflow = StateGraph(ReportState)
-    async_workflow.add_node('planner', planner_agent)
-    async_workflow.add_node('writer_coordinator', writer_coordinator_async)
-    async_workflow.add_node('compiler', compiler_agent)
-
-    async_workflow.set_entry_point('planner')
-    async_workflow.add_edge('planner', 'writer_coordinator')
-    async_workflow.add_edge('writer_coordinator', 'compiler')
-    async_workflow.add_edge('compiler', END)
-
-    async_app = async_workflow.compile()
-
-    initial_state = {'topic': topic, 'sections': [], 'section_drafts': {}, 'final_report': ''}
-    result = await async_app.ainvoke(initial_state)
     return result['final_report']
 
 
