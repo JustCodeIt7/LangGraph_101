@@ -1,5 +1,7 @@
-langgraph
-litellm
-ollama
-yfinance
-requests
+# Stock Analysis App Dependencies
+streamlit==1.31.0
+langchain==0.1.10
+langchain-community==0.0.24
+langgraph==0.0.26
+yfinance==0.2.36
+pandas==2.2.0

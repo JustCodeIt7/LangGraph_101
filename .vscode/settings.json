@@ -25,15 +25,7 @@
       "**/.github": true,
       "**/.kilocode": true,
       ".kilocode": true,
-      "**/.pytest_cache": true,
-      ".ruff_cache": true,
-      ".virtual_documents": true,
-      "GEMINI.md": true,
-      "Makefile": true,
-      "LICENSE": true,
-      "langgraph.json": true,
-      "context_portal": true,
-      ".aiignore": true
+      "**/.pytest_cache": true
     },
     "explorerExclude.backup": {},
     "python.testing.unittestArgs": [
