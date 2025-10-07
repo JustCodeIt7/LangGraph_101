@@ -19,9 +19,9 @@ MODEL_NAME = 'gpt-oss'
 
 # llm = ChatOpenAI(model="gpt-4.1-nano", max_tokens=500)
 # embedding = OpenAIEmbeddings(model="text-embedding-3-small")
+
+
 ################################ Data Fetching Functions ################################
-
-
 def fetch_stock_price(ticker: str) -> dict:
     """Fetch current stock price and basic company information."""
     # Initialize the yfinance Ticker object
