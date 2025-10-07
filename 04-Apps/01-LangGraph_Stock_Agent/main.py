@@ -1,124 +1,211 @@
+# Stock Analysis App Tutorial
+# This app uses Streamlit for the UI, yfinance for stock data, Ollama for local LLM,
+# LangChain for agent logic, and LangGraph for workflow orchestration.
+# Prerequisites:
+# - Install dependencies: pip install streamlit yfinance langchain langchain-community langgraph ollama langchain-ollama plotly
+# - Run Ollama locally with a model, e.g., ollama run llama3.2
+# - No API key needed (using yfinance for simplicity; switch to Alpha Vantage if preferred, but add API key handling).
+# Run the app: streamlit run stock_analysis_app.py
+# Note: If using Alpha Vantage, create a .streamlit/secrets.toml file with your API key, e.g., ALPHA_VANTAGE_API_KEY = "your_key_here"
+
 import streamlit as st
 import yfinance as yf
-from langchain.prompts import PromptTemplate
-from langchain.chains import LLMChain
-from langgraph.graph import StateGraph, END
-import pandas as pd
-from langchain_ollama import ChatOllama, OllamaEmbeddings
-from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+import plotly.graph_objects as go
+from langchain_ollama import OllamaLLM  # Updated import to avoid deprecation
+from langchain_core.prompts import PromptTemplate
+from langchain_core.tools import tool
+from langchain.agents import create_react_agent, AgentExecutor
+from langchain_core.messages import AIMessage, HumanMessage
+from langgraph.graph import END, StateGraph
+from typing import TypedDict, Annotated, Sequence
+import operator
 
+# --- Section 1: Setup ---
+# Initialize Ollama LLM (assuming local Ollama server is running)
+llm = OllamaLLM(model='llama3.2')  # Change to your preferred model
 
-# model = ChatOpenAI(model="gpt-4.1-nano", max_tokens=500)
-# embedding = OpenAIEmbeddings(model="text-embedding-3-small")
-# Section 1: Setup
-# Install dependencies: pip install streamlit yfinance langchain langgraph ollama
-# Ensure Ollama is installed and running locally with a model like 'llama2'
+# Define ReAct prompt template
+react_prompt = PromptTemplate.from_template(
+    """Answer the following questions as best you can. You have access to the following tools:
 
-# Initialize Ollama LLM (assuming 'llama2' is available)
-llm = ChatOllama(model='llama3.2', temperature=0.2)
-embedding = OllamaEmbeddings(model='nomic-embed-text')
+{tools}
 
+Use the following format:
 
-# Section 2: Data Fetching
-def fetch_stock_data(ticker, period='1y'):
-    """
-    Fetch stock data using yfinance.
-    Returns: info dict, historical prices, financials (income, balance, cashflow)
-    """
-    stock = yf.Ticker(ticker)
-    info = stock.info
-    hist = stock.history(period=period)
-    income = stock.income_stmt
-    balance = stock.balance_sheet
-    cashflow = stock.cashflow
+Question: the input question you must answer
+Thought: you should always think about what to do
+Action: the action to take, should be one of [{tool_names}]
+Action Input: the input to the action
+Observation: the result of the action
+... (this Thought/Action/Action Input/Observation can repeat N times)
+Thought: I now know the final answer
+Final Answer: the final answer to the original input question
 
-    return info, hist, income, balance, cashflow
+Begin!
 
-
-# Section 3: Agent Creation
-# Define a simple analysis prompt
-analysis_prompt = PromptTemplate(
-    input_variables=['ticker', 'summary', 'income', 'balance', 'cashflow'],
-    template="""
-    Analyze the following stock data for {ticker}:
-    Company Summary: {summary}
-    Income Statement: {income}
-    Balance Sheet: {balance}
-    Cash Flow: {cashflow}
-    
-    Provide a summary of financial health, key trends, and investment recommendations.
-    """,
+Question: {input}
+Thought: {agent_scratchpad}"""
 )
 
-# Create LLM chain for analysis
-analysis_chain = LLMChain(llm=llm, prompt=analysis_prompt)
+
+# Define a simple state for LangGraph
+class GraphState(TypedDict):
+    messages: Annotated[Sequence[AIMessage | HumanMessage], operator.add]
+    stock_data: dict
+    analysis: str
 
 
-# LangGraph workflow (simple sequential)
-def analyze_stock(state):
-    ticker = state['ticker']
-    info, hist, income, balance, cashflow = state['data']
+# --- Section 2: Data Fetching ---
+@tool
+def fetch_stock_data(ticker: str) -> dict:
+    """Fetches real-time stock price, historical data, balance sheet, income statement, and cash flow for a given ticker."""
+    try:
+        stock = yf.Ticker(ticker)
+        hist = stock.history(period='1y')  # Fetch 1 year of historical data for charts
+        data = {
+            'price': stock.history(period='1d')['Close'].iloc[-1] if not stock.history(period='1d').empty else None,
+            'historical': hist.to_dict() if not hist.empty else {},
+            'balance_sheet_yearly': stock.balance_sheet.to_dict() if not stock.balance_sheet.empty else {},
+            'balance_sheet_quarterly': stock.quarterly_balance_sheet.to_dict()
+            if not stock.quarterly_balance_sheet.empty
+            else {},
+            'income_stmt_yearly': stock.financials.to_dict() if not stock.financials.empty else {},
+            'income_stmt_quarterly': stock.quarterly_financials.to_dict()
+            if not stock.quarterly_financials.empty
+            else {},
+            'cashflow_yearly': stock.cashflow.to_dict() if not stock.cashflow.empty else {},
+            'cashflow_quarterly': stock.quarterly_cashflow.to_dict() if not stock.quarterly_cashflow.empty else {},
+        }
+        return data
+    except Exception as e:
+        return {'error': str(e)}
 
-    # Convert financials to string summaries
-    summary = info.get('longBusinessSummary', 'No summary available')
-    income_str = income.to_string() if not income.empty else 'No data'
-    balance_str = balance.to_string() if not balance.empty else 'No data'
-    cashflow_str = cashflow.to_string() if not cashflow.empty else 'No data'
 
-    # Run analysis
-    analysis = analysis_chain.run(
-        ticker=ticker, summary=summary, income=income_str, balance=balance_str, cashflow=cashflow_str
+# --- Section 3: Agent Creation ---
+# Define the analysis tool using LLM
+@tool
+def analyze_stock(data: dict) -> str:
+    """Analyzes stock data and provides insights on financial health, trends, and recommendations."""
+    if 'error' in data:
+        return f'Error fetching data: {data["error"]}'
+    prompt = PromptTemplate.from_template(
+        'Analyze the following stock data for financial health, trends, and recommendations. Provide a structured summary:\n{data}'
     )
+    chain = prompt | llm
+    return chain.invoke({'data': str(data)})
 
-    state['analysis'] = analysis
+
+# Create ReAct agent with tools and prompt
+tools = [fetch_stock_data, analyze_stock]
+agent = create_react_agent(llm, tools, react_prompt)
+agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=False)  # Set verbose to False for cleaner output
+
+
+# LangGraph workflow
+def fetch_node(state):
+    result = agent_executor.invoke({'input': f'Fetch data for {state["messages"][-1].content}'})
+    return {'stock_data': result['output']}
+
+
+def analyze_node(state):
+    result = agent_executor.invoke({'input': f'Analyze the data: {state["stock_data"]}'})
+    return {'analysis': result['output']}
+
+
+def end_node(state):
     return state
 
 
-# Build graph
-graph = StateGraph(dict)
-graph.add_node('analyze', analyze_stock)
-graph.set_entry_point('analyze')
-graph.add_edge('analyze', END)
-app = graph.compile()
+workflow = StateGraph(GraphState)
+workflow.add_node('fetch', fetch_node)
+workflow.add_node('analyze', analyze_node)
+workflow.add_node('end', end_node)
 
-# Section 4: UI
-st.title('Stock Analysis App')
-st.write('Enter a stock ticker to analyze (e.g., AAPL, GOOGL)')
+workflow.set_entry_point('fetch')
+workflow.add_edge('fetch', 'analyze')
+workflow.add_edge('analyze', 'end')
 
-ticker = st.text_input('Stock Ticker', value='AAPL').upper()
-period = st.selectbox('Period', ['1y', '2y', '5y'], index=0)
+app = workflow.compile()
 
-if st.button('Analyze'):
-    try:
-        # Fetch data
-        info, hist, income, balance, cashflow = fetch_stock_data(ticker, period)
+# --- Section 4: UI with Streamlit ---
+st.set_page_config(page_title='Stock Analysis App', page_icon='📈', layout='wide')
 
-        # Display basic info
-        st.subheader(f'{ticker} Overview')
-        st.write(f'**Name:** {info.get("longName", "N/A")}')
-        st.write(f'**Current Price:** ${info.get("currentPrice", "N/A")}')
-        st.write(f'**Market Cap:** ${info.get("marketCap", "N/A")}')
+# Sidebar for inputs
+st.sidebar.title('📊 Stock Analyzer')
+st.sidebar.markdown('Enter a stock ticker and select options for analysis.')
 
-        # Historical prices
-        st.subheader('Historical Prices')
-        st.line_chart(hist['Close'])
+ticker = st.sidebar.text_input('Stock Ticker (e.g., AAPL)', placeholder='AAPL')
+period = st.sidebar.selectbox('Historical Period', ['1mo', '3mo', '6mo', '1y', '2y', '5y'], index=3)
+analyze_button = st.sidebar.button('🔍 Analyze Stock')
 
-        # Financials
-        st.subheader('Income Statement (Annual)')
-        st.dataframe(income)
-        st.subheader('Balance Sheet (Annual)')
-        st.dataframe(balance)
-        st.subheader('Cash Flow (Annual)')
-        st.dataframe(cashflow)
+# Main content
+st.title('📈 Advanced Stock Analysis App')
+st.markdown('Analyze stocks with AI-powered insights and visualizations.')
 
-        # Run agent analysis
-        state = {'ticker': ticker, 'data': (info, hist, income, balance, cashflow)}
-        result = app.invoke(state)
+if analyze_button:
+    if ticker.strip() == '':
+        st.sidebar.error('Please enter a valid ticker symbol.')
+    else:
+        with st.spinner('Fetching and analyzing data...'):
+            try:
+                # Fetch historical data separately for charting
+                stock = yf.Ticker(ticker.upper())
+                hist = stock.history(period=period)
 
-        st.subheader('AI Analysis')
-        st.write(result['analysis'])
+                # Run the LangGraph workflow for data and analysis
+                initial_state = {'messages': [HumanMessage(content=ticker.upper())]}
+                final_state = app.invoke(initial_state)
 
-    except Exception as e:
-        st.error(f'Error fetching data: {e}')
+                stock_data = final_state.get('stock_data', {})
+                analysis = final_state.get('analysis', 'No analysis available.')
 
-# Total lines: ~120 (well under 350)
+                # Create tabs for organized display
+                tab1, tab2, tab3 = st.tabs(['📊 Overview', '📈 Charts', '🤖 AI Analysis'])
+
+                with tab1:
+                    st.subheader(f'Overview for {ticker.upper()}')
+                    if 'error' in stock_data:
+                        st.error(f'Error: {stock_data["error"]}')
+                    else:
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            st.metric(
+                                'Current Price',
+                                f'${stock_data.get("price", "N/A"):.2f}' if stock_data.get('price') else 'N/A',
+                            )
+                        with col2:
+                            if not hist.empty:
+                                change = hist['Close'].iloc[-1] - hist['Close'].iloc[0]
+                                pct_change = (change / hist['Close'].iloc[0]) * 100
+                                st.metric(
+                                    f'Change ({period})',
+                                    f'{change:.2f} ({pct_change:.2f}%)',
+                                    delta=f'{pct_change:.2f}%',
+                                )
+                            else:
+                                st.metric(f'Change ({period})', 'N/A')
+
+                        with st.expander('Financial Statements'):
+                            st.json(stock_data)
+
+                with tab2:
+                    st.subheader(f'Price Chart for {ticker.upper()}')
+                    if not hist.empty:
+                        fig = go.Figure()
+                        fig.add_trace(go.Scatter(x=hist.index, y=hist['Close'], mode='lines', name='Close Price'))
+                        fig.update_layout(
+                            title=f'{ticker.upper()} Stock Price ({period})',
+                            xaxis_title='Date',
+                            yaxis_title='Price (USD)',
+                        )
+                        st.plotly_chart(fig, use_container_width=True)
+                    else:
+                        st.warning('No historical data available for charting.')
+
+                with tab3:
+                    st.subheader('AI-Powered Analysis')
+                    st.write(analysis)
+
+            except Exception as e:
+                st.error(f'An error occurred: {str(e)}')
+                st.info('Please check the ticker symbol and try again.')

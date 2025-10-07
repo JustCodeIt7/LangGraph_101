@@ -1,8 +1,9 @@
 # 📈 AI Stock Analysis Agent
 
-A beginner-friendly stock analysis application built with **Streamlit**, **Ollama**, **LangChain**, and **LangGraph**. This app fetches real-time stock data and uses AI to provide financial analysis and investment recommendations.
+A beginner-friendly stock analysis application built with **Streamlit**, **Ollama**, **LangChain**, and **LangGraph**. This app fetches real-time stock data and uses AI to provide financial analysis and investment recommendations. The entire app is under 300 lines of clean, well-commented code perfect for learning!
 
 ![Stock Analysis Agent](https://img.shields.io/badge/Python-3.10+-blue.svg)
+![Lines of Code](https://img.shields.io/badge/Lines_of_Code-276-blue.svg)
 ![License](https://img.shields.io/badge/License-MIT-green.svg)
 
 ## ✨ Features
@@ -13,14 +14,16 @@ A beginner-friendly stock analysis application built with **Streamlit**, **Ollam
 - 💡 **Investment Recommendations**: Get AI-generated buy/hold/sell recommendations
 - 🔄 **LangGraph Workflow**: Orchestrated agent workflow with clear data processing pipeline
 - 🎨 **Beautiful UI**: Clean Streamlit interface with tabs and metrics
+- 🎯 **Beginner-Friendly**: Under 300 lines of clean, well-commented code
 
 ## 🛠️ Tech Stack
 
 - **Frontend**: Streamlit
-- **LLM**: Ollama (llama2)
+- **LLM**: Ollama (llama3.2)
 - **Agent Framework**: LangChain + LangGraph
 - **Data Source**: Yahoo Finance (yfinance)
 - **Language**: Python 3.10+
+- **Total Lines**: 276 lines
 
 ## 📋 Prerequisites
 
@@ -29,7 +32,7 @@ Before you begin, ensure you have:
 1. **Python 3.10+** installed
 2. **Ollama** installed and running locally
    - Download from: https://ollama.ai
-   - Install llama2 model: `ollama pull llama2`
+   - Install llama3.2 model: `ollama pull llama3.2`
 
 ## 🚀 Installation
 
@@ -64,8 +67,8 @@ pip install -r requirements.txt
 # Check if Ollama is running
 ollama list
 
-# Pull llama2 model if not already installed
-ollama pull llama2
+# Pull llama3.2 model if not already installed
+ollama pull llama3.2
 ```
 
 ## 🎯 Usage
@@ -148,13 +151,13 @@ This project is perfect for learning:
 To use a different Ollama model, modify the `llm` initialization in `app.py`:
 
 ```python
-llm = Ollama(model="mistral", temperature=0.3)  # Use mistral instead of llama2
+llm = Ollama(model="mistral", temperature=0.3)  # Use mistral instead of llama3.2
 ```
 
 Available models:
-- `llama2` (default)
+- `llama3.2` (default)
+- `llama3.1`
 - `mistral`
-- `codellama`
 - `phi`
 
 ### Adjust Analysis Temperature
@@ -162,7 +165,7 @@ Available models:
 Higher temperature = more creative, Lower = more focused:
 
 ```python
-llm = Ollama(model="llama2", temperature=0.7)  # More creative
+llm = Ollama(model="llama3.2", temperature=0.7)  # More creative
 ```
 
 ## 🐛 Troubleshooting
@@ -178,7 +181,7 @@ ollama serve
 
 **Solution**: Pull the required model:
 ```bash
-ollama pull llama2
+ollama pull llama3.2
 ```
 
 ### Yahoo Finance data not loading
@@ -252,7 +255,7 @@ MIT License - Feel free to use this code for learning and projects!
 If you encounter issues:
 1. Check the troubleshooting section
 2. Ensure all prerequisites are installed
-3. Verify Ollama is running with llama2 model
+3. Verify Ollama is running with llama3.2 model
 
 ---
 
