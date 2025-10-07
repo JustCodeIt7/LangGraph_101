@@ -41,6 +41,17 @@ def fetch_stock_price(ticker: str) -> dict:
         'company_name': info.get('longName', ticker),
     }
 
+def get_recent_data(df, items):
+    """Extract a list of items from the most recent column of a dataframe."""
+    # Return an empty dict if the dataframe is empty
+    if df.empty:
+        return {}
+    result = {}
+    # Iterate through requested items and extract the latest value
+    for item in items:
+        if item in df.index:
+            result[item] = df.loc[item].iloc[0]  # .iloc[0] gets the most recent data
+    return result
 
 def fetch_financial_statements(ticker: str, period: str = 'yearly') -> dict:
     """Fetch balance sheet, income statement, and cash flow for a given period."""
@@ -55,18 +66,6 @@ def fetch_financial_statements(ticker: str, period: str = 'yearly') -> dict:
         balance_sheet = stock.balance_sheet
         income_stmt = stock.income_stmt
         cashflow = stock.cashflow
-
-    def get_recent_data(df, items):
-        """Extract a list of items from the most recent column of a dataframe."""
-        # Return an empty dict if the dataframe is empty
-        if df.empty:
-            return {}
-        result = {}
-        # Iterate through requested items and extract the latest value
-        for item in items:
-            if item in df.index:
-                result[item] = df.loc[item].iloc[0]  # .iloc[0] gets the most recent data
-        return result
 
     # Define the key financial metrics to extract from each statement
     balance_items = ['Total Assets', 'Total Liabilities Net Minority Interest', 'Stockholders Equity']
@@ -234,11 +233,11 @@ def main():
             with st.expander('📋 Agent Progress Log'):
                 for msg in result['messages']:
                     st.write(msg)
-            
+
             with st.expander('View Full Results:'):
                 st.write(result)
-            
-            
+
+
             # Organize and display the results in separate tabs
             tab1, tab2, tab3, tab4 = st.tabs(['📊 Price Data', '💰 Financials', '🔍 Analysis', '💡 Recommendation'])
 
