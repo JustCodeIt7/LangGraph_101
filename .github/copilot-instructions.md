@@ -19,10 +19,12 @@ High-value directories:
 
 Lightweight Python project (no heavy framework). Key libs actually used:
 
-- `langgraph`, `langchain-core`, `langchain`, provider-specific modules (`langchain_openai`, `langchain_ollama`, `litellm`)
+- `langgraph`, `langchain-core`, `langchain`, provider-specific modules (`langchain_openai`, `langchain_ollama`, `langchain_anthropic`, `litellm`)
 - `rich` for pretty console output
-- `yfinance` in finance/stock agents
+- `yfinance` in finance/stock agents; `tavily` for web search in research agents
+- `streamlit` for interactive app demos (e.g., `04-Apps/01-LangGraph_Stock_Agent/`)
 - `python-dotenv` for local config
+- `uv` for fast package management (see `uv.lock`); fallback to `pip install -r requirements.txt`
   No central `src/` package; examples are script/notebook oriented. Keep additions similarly minimal unless creating reusable utilities.
 
 ## 3. Patterns & Conventions
@@ -50,10 +52,16 @@ File Layout:
 Typical usage is: open a notebook or run a script directly.
 General workflow:
 
-1. Set environment variables (API keys) via `.env` (create if needed). Example keys: `OPENAI_API_KEY`, OLLAMA running locally.
-2. Install deps: `pip install -r requirements.txt` (or editable: `pip install -e .` for experimentation with local module pieces).
+1. Set environment variables (API keys) via `.env` (create if needed). Example keys: `OPENAI_API_KEY`, `TAVILY_API_KEY`, OLLAMA running locally.
+2. Install deps: `uv sync` (preferred for speed) or `pip install -r requirements.txt` (or editable: `pip install -e .` for experimentation with local module pieces).
 3. Run a sample: `python research_agent/agent.py` or open a notebook in Jupyter.
    No test suite present—if adding one, colocate under `tests/` with pytest and keep fast.
+
+## 4.5 Code Quality & Linting
+
+- Lint and format: `make lint` (ruff for style, mypy for types, line length 120, single quotes).
+- Format only: `make format`.
+- Spell check: `make spell_check` (codespell).
 
 ## 5. Adding New Material (Important)
 
