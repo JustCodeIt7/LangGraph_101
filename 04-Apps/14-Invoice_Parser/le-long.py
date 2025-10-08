@@ -58,7 +58,7 @@ result = lx.extract(
     examples=examples,
     model_id='gemini-2.5-flash-lite',
     extraction_passes=3,  # Multiple passes for improved recall
-    max_workers=20,  # Parallel processing for speed
+    max_workers=1,  # Reduced to avoid rate limits on free tier
     max_char_buffer=1000,  # Smaller contexts for better accuracy
 )
 
