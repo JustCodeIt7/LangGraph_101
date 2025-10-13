@@ -1,10 +1,12 @@
 import langextract as lx
 import textwrap
 from collections import Counter, defaultdict
-from dotenv import load_dotenv
+import os
+from langextract.providers import ollama
 
-# Load environment variables from .env file
-load_dotenv()
+# Ollama configuration
+DEFAULT_MODEL = 'llama3.2'
+DEFAULT_OLLAMA_URL = os.environ.get('OLLAMA_HOST', 'http://localhost:11434')
 
 # Define comprehensive prompt and examples for complex literary text
 prompt = textwrap.dedent("""\
@@ -51,15 +53,20 @@ examples = [
 
 # Process Romeo & Juliet directly from Project Gutenberg
 print('Downloading and processing Romeo and Juliet from Project Gutenberg...')
+print(f'Using Ollama model: {DEFAULT_MODEL}')
+print(f'Ollama server: {DEFAULT_OLLAMA_URL}')
 
 result = lx.extract(
     text_or_documents='https://www.gutenberg.org/files/1513/1513-0.txt',
     prompt_description=prompt,
     examples=examples,
-    model_id='gemini-2.5-flash-lite',
+    model_id=DEFAULT_MODEL,
+    model_url=DEFAULT_OLLAMA_URL,
+    resolver_params={'format_handler': ollama.OLLAMA_FORMAT_HANDLER},
     extraction_passes=3,  # Multiple passes for improved recall
-    max_workers=1,  # Reduced to avoid rate limits on free tier
+    max_workers=1,  # Reduced to avoid overwhelming local Ollama server
     max_char_buffer=1000,  # Smaller contexts for better accuracy
+    show_progress=True,
 )
 
 print(f'Extracted {len(result.extractions)} entities from {len(result.text):,} characters')
@@ -101,7 +108,7 @@ for char_name, char_data in sorted_chars[:10]:  # Top 10 characters
 
 # Entity type breakdown
 entity_counts = Counter(e.extraction_class for e in result.extractions)
-print(f'\nENTITY TYPE BREAKDOWN')
+print('\nENTITY TYPE BREAKDOWN')
 print('=' * 60)
 for entity_type, count in entity_counts.most_common():
     percentage = (count / len(result.extractions)) * 100

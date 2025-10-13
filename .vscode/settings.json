@@ -1,88 +1,56 @@
 {
-    "python-envs.defaultEnvManager": "ms-python.python:conda",
-    "python-envs.defaultPackageManager": "ms-python.python:conda",
-    "python-envs.pythonProjects": [],
-    "files.exclude": {
-      "**/.git": true,
-      "**/.svn": true,
-      "**/.hg": true,
-      "**/.DS_Store": true,
-      "**/Thumbs.db": true,
-      ".idea": true,
-      ".vscode": true,
-      "**/__pycache__": true,
-      "**/.jupytext-sync-ipynb": true,
-      "**/.roo": true,
-      ".roo": true,
-      "**/.zed": true,
-      ".zed": true,
-      "**/.mypy_cache": true,
-      ".mypy_cache": true,
-      "**/.junie": true,
-      ".junie": true,
-      "**/.continue": true,
-      ".continue": true,
-      "**/.github": true,
-      "**/.kilocode": true,
-      ".kilocode": true,
-      "**/.pytest_cache": true
-    },
-    "explorerExclude.backup": {},
-    "python.testing.unittestArgs": [
-        "-v",
-        "-s",
-        "./01-Graphs",
-        "-p",
-        "test_*.py"
-    ],
-    "python.testing.pytestEnabled": false,
-    "python.testing.unittestEnabled": true,
-    "claudeCodeChat.permissions.yoloMode": true,
-    "DockerRun.DisableAutoGenerateConfig": true,
-    "hide-files.files": [
-      ".ruff_cache",
-      ".virtual_documents",
-      "GEMINI.md",
-      "Makefile",
-      "LICENSE",
-      "langgraph.json",
-      "context_portal",
-      ".aiignore"
-    ],
-    "editor.tokenColorCustomizations": {
-      "comments": "#00000000",
-      "textMateRules": [
-        {
-          "scope": [
-            "hidecomments",
-            "comment",
-            "comment.block",
-            "comment.line",
-            "comment.line.double-slash",
-            "variable.other.jsdoc",
-            "storage.type.class.jsdoc",
-            "punctuation.definition.block.tag.jsdoc",
-            "punctuation.definition.bracket.curly.begin.jsdoc",
-            "punctuation.definition.bracket.curly.end.jsdoc",
-            "entity.name.type.instance.jsdoc",
-            "comment.block.documentation.ts",
-            "comment.block.documentation.js",
-            "comment.block.documentation.cs",
-            "comment.block.documentation.cs entity.other.attribute-name.localname.cs",
-            "comment.block.documentation.cs entity.other.attribute-name.cs",
-            "comment.block.documentation.cs punctuation.definition.tag.cs",
-            "comment.block.documentation.cs punctuation.definition.string.begin.cs",
-            "comment.block.documentation.cs punctuation.definition.string.end.cs",
-            "comment.block.documentation.cs punctuation.definition.bracket.curly.begin.cs",
-            "comment.block.documentation.cs punctuation.definition.bracket.curly.end.cs",
-            "comment.block.documentation.cs punctuation.definition.block.tag.cs",
-            "comment.block.documentation.cs string.quoted.double.cs",
-            "comment.block.documentation.cs entity.name.tag.localname.cs"
-          ],
-          "settings": {
-            "foreground": "#00000000"
-          }
-        }
-      ]
-    }
+  "python-envs.defaultEnvManager": "ms-python.python:conda",
+  "python-envs.defaultPackageManager": "ms-python.python:conda",
+  "python-envs.pythonProjects": [],
+  "files.exclude": {
+    "**/.git": true,
+    "**/.svn": true,
+    "**/.hg": true,
+    "**/.DS_Store": true,
+    "**/Thumbs.db": true,
+    ".idea": true,
+    ".vscode": true,
+    "**/__pycache__": true,
+    "**/.jupytext-sync-ipynb": true,
+    "**/.roo": true,
+    ".roo": true,
+    "**/.zed": true,
+    ".zed": true,
+    "**/.mypy_cache": true,
+    ".mypy_cache": true,
+    "**/.junie": true,
+    ".junie": true,
+    "**/.continue": true,
+    ".continue": true,
+    "**/.github": true,
+    "**/.kilocode": true,
+    ".kilocode": true,
+    "**/.pytest_cache": true
+  },
+  "explorerExclude.backup": {},
+  "python.testing.unittestArgs": [
+    "-v",
+    "-s",
+    "./01-Graphs",
+    "-p",
+    "test_*.py"
+  ],
+  "python.testing.pytestEnabled": false,
+  "python.testing.unittestEnabled": true,
+  "claudeCodeChat.permissions.yoloMode": true,
+  "DockerRun.DisableAutoGenerateConfig": true,
+  "hide-files.files": [
+    ".ruff_cache",
+    ".virtual_documents",
+    "GEMINI.md",
+    "Makefile",
+    "LICENSE",
+    "langgraph.json",
+    "context_portal",
+    ".aiignore"
+  ],
+  "editor.tokenColorCustomizations": {
+    "comments": "",
+    "textMateRules": []
+  }
 }
