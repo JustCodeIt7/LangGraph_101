@@ -41,17 +41,13 @@ def fetch_stock_price(ticker: str) -> dict:
         'company_name': info.get('longName', ticker),
     }
 
+
 def get_recent_data(df, items):
     """Extract a list of items from the most recent column of a dataframe."""
     # Return an empty dict if the dataframe is empty
     if df.empty:
         return {}
-    result = {}
-    # Iterate through requested items and extract the latest value
-    for item in items:
-        if item in df.index:
-            result[item] = df.loc[item].iloc[0]  # .iloc[0] gets the most recent data
-    return result
+    return {item: df.loc[item].iloc[0] for item in items if item in df.index}
 
 
 def fetch_financial_statements(ticker: str, period: str = 'yearly') -> dict:
@@ -111,7 +107,6 @@ def fetch_data_node(state: AgentState) -> AgentState:
     return state
 
 
-
 def analyze_financials_node(state: AgentState) -> AgentState:
     """Node 2: Use an LLM to analyze the collected financial data."""
     # Initialize the LLM for the analysis task
@@ -145,6 +140,7 @@ def analyze_financials_node(state: AgentState) -> AgentState:
     state['messages'].append('✓ Completed financial analysis')
 
     return state
+
 
 def generate_recommendation_node(state: AgentState) -> AgentState:
     """Node 3: Use an LLM to generate an investment recommendation."""
@@ -198,7 +194,6 @@ def create_stock_analysis_graph():
 ################################ Streamlit UI ################################
 
 
-
 def main():
     """Define the main Streamlit application layout and logic."""
     st.set_page_config(page_title='Stock Analysis Agent', page_icon='📈', layout='wide')
@@ -239,7 +234,6 @@ def main():
 
             with st.expander('View Full Results:'):
                 st.write(result)
-
 
             # Organize and display the results in separate tabs
             tab1, tab2, tab3, tab4 = st.tabs(['📊 Price Data', '💰 Financials', '🔍 Analysis', '💡 Recommendation'])
@@ -289,7 +283,6 @@ def main():
             with tab4:
                 st.subheader('💡 Investment Recommendation')
                 st.markdown(result['recommendation'])
-
 
 
 # Define the entry point for the script
