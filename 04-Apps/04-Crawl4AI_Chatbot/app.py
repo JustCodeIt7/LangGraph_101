@@ -1,250 +1,327 @@
-import os
-import re
-import asyncio
-from typing import List, Dict, Any, Tuple
+"""
+Streamlit Web Chat App with Crawl4AI and LangChain
+A simple app to crawl websites, extract content, and chat with it using RAG.
+"""
 
 import streamlit as st
+import os
+from typing import List, Dict, Set
+import asyncio
+from urllib.parse import urljoin, urlparse
 from dotenv import load_dotenv
-
-# LangChain
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_community.vectorstores import FAISS
-from langchain.docstore.document import Document
-from langchain.memory import ConversationBufferMemory
-from langchain.chains import ConversationalRetrievalChain
-from langchain_openai import OpenAIEmbeddings, ChatOpenAI
-
 from bs4 import BeautifulSoup
 
-# Load environment from .env
-load_dotenv(override=False)
+load_dotenv()
+
+from crawl4ai import AsyncWebCrawler
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_openai import OpenAIEmbeddings, ChatOpenAI
+from langchain_community.vectorstores import FAISS
+from langchain.chains import ConversationalRetrievalChain
+from langchain.memory import ConversationBufferMemory
+from langchain.schema import Document
+
+################################ Helper Functions ################################
 
 
-# ------------- Crawl4AI helpers -------------
-def _html_to_text(html: str) -> str:
-    if not html:
-        return ''
-    soup = BeautifulSoup(html, 'html.parser')
-    for el in soup(['script', 'style', 'noscript']):
-        el.extract()
-    text = soup.get_text(separator='\n')
-    text = re.sub(r'\s+\n', '\n', text)
-    text = re.sub(r'\n{3,}', '\n\n', text)
-    text = re.sub(r'[ \t]{2,}', ' ', text)
-    return text.strip()
+def get_base_domain(url: str) -> str:
+    """Parse a URL to extract its scheme and network location (domain)."""
+    parsed = urlparse(url)
+    return f'{parsed.scheme}://{parsed.netloc}'
 
 
-def _collect_pages_from_result(result: Any) -> List[Dict[str, str]]:
-    pages: List[Dict[str, str]] = []
+def extract_links(html_content: str, base_url: str) -> Set[str]:
+    """Extract all internal links from a given HTML content."""
+    soup = BeautifulSoup(html_content, 'html.parser')
+    links = set()
+    base_domain = get_base_domain(base_url)
 
-    def grab_text_from_obj(obj: Any) -> Tuple[str, str]:
-        url = ''
-        content = ''
+    # Find all anchor tags with an 'href' attribute
+    for link in soup.find_all('a', href=True):
+        # Convert relative URLs to absolute URLs
+        absolute_url = urljoin(base_url, link['href'])
+        # Only include links that belong to the same base domain
+        if get_base_domain(absolute_url) == base_domain:
+            links.add(absolute_url)
 
-        for k in ('url', 'page_url', 'source', 'link'):
-            if hasattr(obj, k) and getattr(obj, k):
-                url = getattr(obj, k)
-                break
-            if isinstance(obj, dict) and k in obj and obj[k]:
-                url = obj[k]
-                break
+    return links
 
-        for k in ('markdown', 'text', 'cleaned_text', 'content', 'extracted_content', 'page_content', 'md'):
-            if hasattr(obj, k) and getattr(obj, k):
-                content = getattr(obj, k)
-                break
-            if isinstance(obj, dict) and k in obj and obj[k]:
-                content = obj[k]
-                break
 
-        if not content:
-            for k in ('html', 'raw_html'):
-                if hasattr(obj, k) and getattr(obj, k):
-                    content = _html_to_text(getattr(obj, k))
-                    break
-                if isinstance(obj, dict) and k in obj and obj[k]:
-                    content = _html_to_text(obj[k])
-                    break
+def extract_title(html_content: str) -> str:
+    """Extract the page title from the HTML content."""
+    soup = BeautifulSoup(html_content, 'html.parser')
+    title_tag = soup.find('title')
+    # Return the title text or 'Untitled' if not found
+    return title_tag.get_text().strip() if title_tag else 'Untitled'
 
-        return (url or '', (content or '').strip())
 
-    if isinstance(result, list):
-        for item in result:
-            url, content = grab_text_from_obj(item)
-            if content:
-                pages.append({'url': url, 'content': content})
-        return pages
+async def crawl_website(url: str, max_pages: int = 5, max_depth: int = 2) -> List[Dict[str, str]]:
+    """Crawl a website asynchronously, respecting depth and page limits."""
+    crawled_data = []
+    visited_urls = set()
+    to_crawl = [(url, 0)]  # A queue of (URL, depth) tuples
 
-    for attr in ('pages', 'results', 'docs', 'documents', 'items'):
-        if hasattr(result, attr) and getattr(result, attr):
-            seq = getattr(result, attr)
-            for item in seq:
-                url, content = grab_text_from_obj(item)
+    # Use an asynchronous web crawler for efficient fetching
+    async with AsyncWebCrawler(verbose=False) as crawler:
+        # Continue crawling while there are pages in the queue and page limit is not reached
+        while to_crawl and len(crawled_data) < max_pages:
+            current_url, current_depth = to_crawl.pop(0)
+
+            # Skip if the URL has been visited or the crawl depth is exceeded
+            if current_url in visited_urls or current_depth > max_depth:
+                continue
+
+            visited_urls.add(current_url)
+            # Fetch the content of the current URL
+            result = await crawler.arun(url=current_url)
+
+            # Process the result if the crawl was successful
+            if result.success:
+                title = extract_title(result.html) if result.html else 'Untitled'
+                # Prefer Markdown content, fall back to cleaned HTML
+                content = result.markdown if result.markdown else result.cleaned_html
+
+                # Add the extracted data to our list if content exists
                 if content:
-                    pages.append({'url': url, 'content': content})
-            return pages
+                    crawled_data.append(
+                        {'url': current_url, 'content': content, 'title': title, 'depth': current_depth}
+                    )
 
-    url, content = grab_text_from_obj(result)
-    if content:
-        pages.append({'url': url, 'content': content})
-    return pages
+                # If not at max depth, find new links to add to the queue
+                if current_depth < max_depth and result.html:
+                    links = extract_links(result.html, current_url)
+                    for link in links:
+                        # Add new, unvisited links to the crawl queue
+                        if link not in visited_urls:
+                            to_crawl.append((link, current_depth + 1))
+
+    return crawled_data
 
 
-def crawl_site(
-    url: str, max_pages: int = 20, max_depth: int = 2, same_domain: bool = True, timeout: int = 30
-) -> List[Dict[str, str]]:
-    from crawl4ai import AsyncWebCrawler, CrawlerRunConfig, CacheMode
-
-    async def _async_crawl():
-        async with AsyncWebCrawler() as crawler:
-            cfg = CrawlerRunConfig(
-                cache_mode=CacheMode.BYPASS,
-                page_timeout=timeout * 1000,  # Convert seconds to milliseconds
-                exclude_external_links=same_domain,  # If True, only crawl pages from the same domain
-                word_count_threshold=10,  # Lower threshold to capture more content
+def create_vector_store(crawled_data: List[Dict[str, str]], api_key: str):
+    """Create a FAISS vector store from the crawled website content."""
+    documents = []
+    # Convert crawled data into LangChain Document objects
+    for item in crawled_data:
+        # Ensure content is not just whitespace
+        if item['content'].strip():
+            doc = Document(
+                page_content=item['content'],
+                metadata={'source': item['url'], 'title': item['title'], 'depth': item['depth']},
             )
-            result = await crawler.arun(url=url, config=cfg)
-            return result
+            documents.append(doc)
 
-    # Run async function in event loop (compatible with Streamlit)
-    try:
-        loop = asyncio.get_event_loop()
-    except RuntimeError:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
+    # Split documents into smaller chunks for effective embedding
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+    splits = text_splitter.split_documents(documents)
 
-    result = loop.run_until_complete(_async_crawl())
-    return _collect_pages_from_result(result if result else [])
+    # Generate embeddings for the document chunks
+    embeddings = OpenAIEmbeddings(openai_api_key=api_key)
+    # Create the FAISS vector store from the chunks and their embeddings
+    vector_store = FAISS.from_documents(splits, embeddings)
 
-
-# ------------- Vector store and LLM -------------
-def build_vectorstore(pages: List[Dict[str, str]], chunk_size: int = 1000, chunk_overlap: int = 150) -> FAISS:
-    docs: List[Document] = []
-    for p in pages:
-        text = (p.get('content') or '').strip()
-        if not text:
-            continue
-        url = p.get('url') or ''
-        docs.append(Document(page_content=text, metadata={'source': url}))
-
-    splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
-    split_docs = splitter.split_documents(docs)
-
-    embeddings = OpenAIEmbeddings()
-    vs = FAISS.from_documents(split_docs, embeddings)
-    return vs
+    return vector_store, len(splits)
 
 
-def build_conversational_chain(vectorstore: FAISS, model: str = 'gpt-4o-mini') -> ConversationalRetrievalChain:
-    llm = ChatOpenAI(model=model, temperature=0.2)
-    retriever = vectorstore.as_retriever(search_kwargs={'k': 4})
-    memory = ConversationBufferMemory(
-        memory_key='chat_history',
-        return_messages=True,
-        output_key='answer',  # Explicitly set output key for memory
-    )
-    chain = ConversationalRetrievalChain.from_llm(
+def create_conversation_chain(vector_store, api_key: str):
+    """Create a conversational retrieval chain with memory."""
+    # Initialize the language model
+    llm = ChatOpenAI(temperature=0.7, model_name='gpt-3.5-turbo', openai_api_key=api_key)
+    # Set up memory to retain chat history
+    memory = ConversationBufferMemory(memory_key='chat_history', return_messages=True, output_key='answer')
+
+    # Construct the conversational retrieval chain
+    return ConversationalRetrievalChain.from_llm(
         llm=llm,
-        retriever=retriever,
+        retriever=vector_store.as_retriever(search_kwargs={'k': 3}),  # Retrieve top 3 relevant chunks
         memory=memory,
         return_source_documents=True,
-        output_key='answer',  # Explicitly set output key for the chain
     )
-    return chain
 
 
-# ------------- Streamlit UI -------------
-st.set_page_config(page_title='Website Chat (Crawl4AI + LangChain)', page_icon='🕷️', layout='wide')
-st.title('🕷️ Website Chat with Crawl4AI + LangChain')
-
-with st.sidebar:
-    st.header('Configuration')
-    max_pages = st.number_input('Max pages', min_value=1, max_value=200, value=20, step=1)
-    max_depth = st.number_input('Max depth', min_value=1, max_value=5, value=2, step=1)
-    same_domain = st.checkbox('Restrict to same domain', value=True)
-    chunk_size = st.slider('Chunk size', min_value=300, max_value=2000, value=1000, step=50)
-    chunk_overlap = st.slider('Chunk overlap', min_value=0, max_value=400, value=150, step=10)
-    model_name = st.selectbox('Chat model', options=['gpt-4o-mini', 'gpt-4o', 'gpt-4o-mini-2024-07-18'], index=0)
-
-# Session state
-st.session_state.setdefault('vectorstore', None)
-st.session_state.setdefault('chain', None)
-st.session_state.setdefault('pages', [])
-st.session_state.setdefault('chat_messages', [])  # List[Tuple[role, content]]
-
-# URL input and crawl action
-url = st.text_input('Website URL', placeholder='https://example.com', value='https://www.promptingguide.ai')
-col_crawl, col_reset = st.columns([1, 1])
-with col_crawl:
-    crawl_btn = st.button('Crawl and Index', type='primary')
-with col_reset:
-    if st.button('Reset'):
-        st.session_state['vectorstore'] = None
-        st.session_state['chain'] = None
-        st.session_state['pages'] = []
-        st.session_state['chat_messages'] = []
-
-# Crawl and index (no error handling by request)
-if crawl_btn:
-    pages = crawl_site(
-        url.strip(),
-        max_pages=int(max_pages),
-        max_depth=int(max_depth),
-        same_domain=bool(same_domain),
-        timeout=30,
-    )
-    vs = build_vectorstore(pages, chunk_size=int(chunk_size), chunk_overlap=int(chunk_overlap))
-    chain = build_conversational_chain(vs, model=model_name)
-
-    st.session_state['vectorstore'] = vs
-    st.session_state['chain'] = chain
-    st.session_state['pages'] = pages
-    st.session_state['chat_messages'] = []
-    st.success(f'Crawled and indexed {len(pages)} page(s). You can now chat with the site.')
+################################ UI Component Functions ################################
 
 
-# Content summary
-def summarize_pages(pages: List[Dict[str, str]]) -> str:
-    total_chars = sum(len((p.get('content') or '')) for p in pages)
-    top_samples = []
-    for p in pages[:5]:
-        u = p.get('url') or ''
-        text = (p.get('content') or '').strip()
-        sample = (text[:200] + '…') if len(text) > 200 else text
-        top_samples.append(f'- {u}\n  Sample: {sample}')
-    summary = f'Pages: {len(pages)}\nTotal characters: {total_chars}\nTop pages:\n' + (
-        '\n'.join(top_samples) if top_samples else '  (no samples)'
-    )
-    return summary
+def initialize_session_state():
+    """Initialize session state variables."""
+    if 'conversation' not in st.session_state:
+        st.session_state.conversation = None
+    if 'chat_history' not in st.session_state:
+        st.session_state.chat_history = []
+    if 'crawled_data' not in st.session_state:
+        st.session_state.crawled_data = None
 
 
-if st.session_state['pages']:
-    with st.expander('Crawled Content Summary'):
-        st.text(summarize_pages(st.session_state['pages']))
+def render_sidebar():
+    """Render the sidebar with configuration and controls."""
+    with st.sidebar:
+        st.header('⚙️ Configuration')
 
-st.divider()
-st.subheader('Chat with the Website')
+        # Load the OpenAI API key from environment variables
+        openai_api_key = os.getenv('OPENAI_API_KEY', '')
 
-# Render chat history
-for role, msg in st.session_state['chat_messages']:
-    with st.chat_message(role):
-        st.markdown(msg)
+        # Display a status message for the API key
+        if openai_api_key:
+            st.success('✅ OpenAI API Key loaded')
+        else:
+            st.error('❌ OPENAI_API_KEY not found in .env file')
 
-# Chat input (no error handling by request)
-user_msg = st.chat_input("Ask something about the website's content...")
-if user_msg:
-    st.session_state['chat_messages'].append(('user', user_msg))
-    with st.chat_message('user'):
-        st.markdown(user_msg)
+        st.markdown('---')
 
-    res = st.session_state['chain']({'question': user_msg})
-    answer = res.get('answer') or res.get('result') or ''
-    with st.chat_message('assistant'):
-        st.markdown(answer)
-        src_docs = res.get('source_documents') or []
-        if src_docs:
-            with st.expander('Sources'):
-                for i, d in enumerate(src_docs, 1):
-                    src = d.metadata.get('source', '(unknown)')
-                    st.write(f'{i}. {src}')
-    st.session_state['chat_messages'].append(('assistant', answer))
+        st.subheader('🔗 Website to Crawl')
+        # Create a text input for the target website URL
+        website_url = st.text_input(
+            'Enter Website URL',
+            placeholder='https://example.com',
+            value='https://www.promptingguide.ai',  # Provide a default example URL
+        )
+
+        st.subheader('🕷️ Crawl Settings')
+        # Create number inputs for crawl parameters
+        max_pages = st.number_input('Maximum Pages', min_value=1, max_value=50, value=5)
+        max_depth = st.number_input('Crawl Depth', min_value=0, max_value=5, value=1)
+
+        st.caption(f'📊 Will crawl up to {max_pages} pages at depth {max_depth}')
+        st.markdown('---')
+
+        # Create the primary button to initiate the crawl and processing
+        crawl_button = st.button('🕷️ Crawl & Process', use_container_width=True, type='primary')
+
+        # Create a button to reset the application state
+        if st.button('🔄 Reset', use_container_width=True):
+            st.session_state.conversation = None
+            st.session_state.chat_history = []
+            st.session_state.crawled_data = None
+            st.rerun()  # Rerun the script to reflect the cleared state
+
+        st.markdown('---')
+
+        # Display crawl results in the sidebar after processing is complete
+        if st.session_state.crawled_data:
+            st.success('✅ Website processed!')
+            st.metric('Pages Crawled', len(st.session_state.crawled_data))
+
+            # Show the list of crawled pages in an expander
+            with st.expander('📄 Crawled Pages'):
+                # Loop through each crawled item to display its details
+                for idx, item in enumerate(st.session_state.crawled_data):
+                    depth_indicator = '📍' * (item['depth'] + 1)  # Visualize crawl depth
+                    st.markdown(f'{depth_indicator} **{idx + 1}. {item["title"]}**')
+                    st.caption(item['url'])
+                    st.markdown('---')
+
+    return openai_api_key, website_url, max_pages, max_depth, crawl_button
+
+
+def handle_crawl_and_process(openai_api_key: str, website_url: str, max_pages: int, max_depth: int):
+    """Handle the crawl and processing logic."""
+    # Validate that the API key and URL are provided
+    if not openai_api_key:
+        st.error('❌ Please set OPENAI_API_KEY in .env file')
+        return
+
+    if not website_url:
+        st.error('❌ Please enter a website URL')
+        return
+
+    # Show a spinner while the website is being crawled
+    with st.spinner(f'🕷️ Crawling website...'):
+        crawled_data = asyncio.run(crawl_website(website_url, max_pages, max_depth))
+        st.session_state.crawled_data = crawled_data
+
+    # Proceed only if crawling returned some data
+    if crawled_data:
+        # Show a spinner while the content is being processed into a vector store
+        with st.spinner('🧠 Processing content...'):
+            vector_store, num_chunks = create_vector_store(crawled_data, openai_api_key)
+            conversation = create_conversation_chain(vector_store, openai_api_key)
+            st.session_state.conversation = conversation
+            st.session_state.chat_history = []  # Clear previous chat history
+
+        st.success(f'✅ Processed {len(crawled_data)} pages into {num_chunks} chunks!')
+        st.rerun()  # Rerun to update the UI and display the chat interface
+    else:
+        st.error('❌ No content extracted from the website')
+
+
+def render_chat_interface():
+    """Render the chat interface."""
+    # Display the chat interface only if the conversation chain is ready
+    if not st.session_state.conversation:
+        return
+
+    st.markdown('---')
+    st.subheader('💬 Chat with the Website Content')
+
+    # Display previous messages from the chat history
+    for message in st.session_state.chat_history:
+        with st.chat_message(message['role']):
+            st.markdown(message['content'])
+            # If the message is from the assistant, show the sources it used
+            if message['role'] == 'assistant' and 'sources' in message:
+                with st.expander('📚 Sources'):
+                    for source in message['sources']:
+                        st.caption(f'- {source}')
+
+    # Capture the user's new question from the chat input
+    if user_question := st.chat_input('Ask a question about the website content...'):
+        # Add the user's question to the chat history
+        st.session_state.chat_history.append({'role': 'user', 'content': user_question})
+
+        # Display the user's question in the chat
+        with st.chat_message('user'):
+            st.markdown(user_question)
+
+        # Generate and display the assistant's response
+        with st.chat_message('assistant'):
+            with st.spinner('Thinking...'):
+                # Send the question to the conversation chain to get a response
+                response = st.session_state.conversation({'question': user_question})
+                answer = response['answer']
+                source_documents = response.get('source_documents', [])
+
+                st.markdown(answer)
+
+                # Extract unique source URLs from the response documents
+                sources = list({doc.metadata.get('source', 'Unknown') for doc in source_documents})
+
+                # Display the sources in an expander if any were found
+                if sources:
+                    with st.expander('📚 Sources'):
+                        for source in sources:
+                            st.caption(f'- {source}')
+
+                # Add the assistant's response and sources to the chat history
+                st.session_state.chat_history.append({'role': 'assistant', 'content': answer, 'sources': sources})
+
+
+################################ Main Entry Point ################################
+
+
+def main():
+    """Main entry point for the Streamlit application."""
+    # Configure the Streamlit page settings
+    st.set_page_config(page_title='Web Content Chat', page_icon='🌐', layout='wide')
+
+    # Set up the main title and description of the app
+    st.title('🌐 Web Content Chat Assistant')
+    st.markdown("Chat with any website's content! Enter a URL, crawl it, and ask questions.")
+
+    # Initialize session state
+    initialize_session_state()
+
+    # Render sidebar and get user inputs
+    openai_api_key, website_url, max_pages, max_depth, crawl_button = render_sidebar()
+
+    # Handle crawl and process action
+    if crawl_button:
+        handle_crawl_and_process(openai_api_key, website_url, max_pages, max_depth)
+
+    # Render chat interface
+    render_chat_interface()
+
+
+################################ Application Entry Point ################################
+
+if __name__ == '__main__':
+    main()
