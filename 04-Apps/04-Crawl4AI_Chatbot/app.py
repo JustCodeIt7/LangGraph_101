@@ -93,18 +93,18 @@ def _collect_pages_from_result(result: Any) -> List[Dict[str, str]]:
 def crawl_site(
     url: str, max_pages: int = 20, max_depth: int = 2, same_domain: bool = True, timeout: int = 30
 ) -> List[Dict[str, str]]:
-    from crawl4ai import AsyncWebCrawler, CrawlerRunConfig, CacheMode  # no error handling by request
+    from crawl4ai import AsyncWebCrawler, CrawlerRunConfig, CacheMode
 
     async def _async_crawl():
         async with AsyncWebCrawler() as crawler:
             cfg = CrawlerRunConfig(
                 cache_mode=CacheMode.BYPASS,
                 page_timeout=timeout * 1000,  # Convert seconds to milliseconds
-                exclude_external_links=not same_domain,  # Keep internal links only if same_domain
+                exclude_external_links=same_domain,  # If True, only crawl pages from the same domain
                 word_count_threshold=10,  # Lower threshold to capture more content
             )
             result = await crawler.arun(url=url, config=cfg)
-            return [result]
+            return result
 
     # Run async function in event loop (compatible with Streamlit)
     try:
@@ -114,7 +114,7 @@ def crawl_site(
         asyncio.set_event_loop(loop)
 
     result = loop.run_until_complete(_async_crawl())
-    return _collect_pages_from_result(result[0] if result else {})
+    return _collect_pages_from_result(result if result else [])
 
 
 # ------------- Vector store and LLM -------------
