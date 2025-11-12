@@ -159,11 +159,6 @@ st.title('🕷️ Website Chat with Crawl4AI + LangChain')
 
 with st.sidebar:
     st.header('Configuration')
-    st.markdown(
-        '- Enter a URL to crawl and chat with its content.\n'
-        '- The app reads OPENAI_API_KEY from your .env file.\n'
-        '- Crawl is restricted to the same domain by default.'
-    )
     max_pages = st.number_input('Max pages', min_value=1, max_value=200, value=20, step=1)
     max_depth = st.number_input('Max depth', min_value=1, max_value=5, value=2, step=1)
     same_domain = st.checkbox('Restrict to same domain', value=True)
@@ -224,8 +219,8 @@ def summarize_pages(pages: List[Dict[str, str]]) -> str:
 
 
 if st.session_state['pages']:
-    st.subheader('Crawled Content Summary')
-    st.text(summarize_pages(st.session_state['pages']))
+    with st.expander('Crawled Content Summary'):
+        st.text(summarize_pages(st.session_state['pages']))
 
 st.divider()
 st.subheader('Chat with the Website')
