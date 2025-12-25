@@ -1,7 +1,6 @@
 ########### Imports & Configuration ########
 
 import streamlit as st
-from tests import MODEL
 import yfinance as yf
 from typing import TypedDict
 from langgraph.graph import StateGraph, END
@@ -18,7 +17,7 @@ OLLAMA_BASE_URL = os.getenv('OLLAMA_BASE_URL', 'http://localhost:11434')
 MODEL_NAME = 'llama3.2'
 
 llm = ChatOllama(model=MODEL_NAME, temperature=0.2, base_url=OLLAMA_BASE_URL)
-# llm = ChatOpenAI(model="gpt-5-nano",temperature=0.2)
+# llm = ChatOpenAI(model='gpt-5-nano', temperature=0.2)
 
 
 ################################ Data Fetching Functions ###################
