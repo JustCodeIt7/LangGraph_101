@@ -2,6 +2,35 @@
 
 This example demonstrates the **Evaluator-Optimizer** design pattern. It creates an iterative loop where one LLM call generates content and another LLM call critiques it to improve the final output.
 
+## Overview
+
+The agent's goal is to generate a high-quality joke. The process involves two main nodes:
+
+1. **Generator Node**: Produces a joke based on the current state.
+2. **Evaluator Node**: Reviews the joke and provides feedback along with a numeric score.
+The agent continues this loop until the joke receives a score of 8 or higher, or until it reaches a maximum of 3 iterations to avoid excessive costs.
+
+Evaluator Optimizer is useful in scenarios where quality is subjective and iterative refinement can lead to better results, such as creative writing, code generation, or design tasks.
+
+## Key Features
+
+- **Iterative Refinement**: The agent demonstrates how iterative feedback loops can improve output quality
+- **Structured Evaluation**: Uses Pydantic models to ensure consistent evaluation format
+- **Cost Control**: Implements iteration limits to prevent excessive API calls
+- **Dynamic Prompting**: Generator node adapts its prompts based on previous feedback
+- **Quality Thresholds**: Continues generating until a quality threshold is met
+
+## Implementation Details
+
+The implementation uses LangGraph to create a stateful, multi-agent system. Key components include:
+
+1. **State Management**: The `AgentState` TypedDict tracks conversation history and iteration count
+2. **Generator Node**: Dynamically adjusts prompts based on previous feedback
+3. **Evaluator Node**: Uses structured output to ensure consistent evaluation format
+4. **Conditional Logic**: Implements quality thresholds and iteration limits
+
+The system demonstrates how to combine generation and evaluation in a feedback loop to improve output quality.
+
 ## Graph Visualization
 
 ```mermaid
@@ -14,9 +43,9 @@ graph TD
     check_score -->|Score >= 8 OR Iterations >= 3| __end__((End))
     check_score -->|Score < 8 AND Iterations < 3| generator
 
-    style generator fill:#d4f1f9,stroke:#333,stroke-width:2px
-    style evaluator fill:#e1d5e7,stroke:#333,stroke-width:2px
-    style check_score fill:#fff2cc,stroke:#333,stroke-width:2px
+    style generator fill:blue,stroke:#333,stroke-width:2px
+    style evaluator fill:purple,stroke:#333,stroke-width:2px
+    style check_score fill:green,stroke:#333,stroke-width:2px
 ```
 
 ## Core Components
