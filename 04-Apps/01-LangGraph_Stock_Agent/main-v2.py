@@ -5,31 +5,28 @@ import yfinance as yf
 from typing import TypedDict
 from langgraph.graph import StateGraph, END
 import json
-from langchain_ollama import ChatOllama, OllamaEmbeddings
-from langchain_openai import ChatOpenAI, OpenAIEmbeddings
-from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
+from langchain_ollama import ChatOllama
 from dotenv import load_dotenv
 import os
 
 load_dotenv()  # Load environment variables from .env file if present
 
 OLLAMA_BASE_URL = os.getenv('OLLAMA_BASE_URL', 'http://localhost:11434')
-# MODEL_NAME = 'gpt-oss'
 MODEL_NAME = 'llama3.2'
 
 llm = ChatOllama(model=MODEL_NAME, temperature=0.2, base_url=OLLAMA_BASE_URL)
-# llm = ChatOpenAI(model='gpt-5-nano', temperature=0.2)
 
 
 ################################ Data Fetching Functions ###################
 def fetch_stock_price(ticker: str) -> dict:
     """Fetch current stock price and basic company information."""
-    # Initialize the yfinance Ticker object
     stock = yf.Ticker(ticker)
     info = stock.info
-    history = stock.history(period='1d')  # Get price data for the last trading day
+    history = stock.history(period='1d')
 
-    # Structure and return the essential price data
+    if history.empty:
+        return {}
+
     return {
         'ticker': ticker,
         'current_price': history['Close'].iloc[-1],
@@ -44,7 +41,6 @@ def fetch_stock_price(ticker: str) -> dict:
 
 def get_recent_data(df, items):
     """Extract a list of items from the most recent column of a dataframe."""
-    # Return an empty dict if the dataframe is empty
     if df.empty:
         return {}
     return {item: df.loc[item].iloc[0] for item in items if item in df.index}
@@ -54,7 +50,6 @@ def fetch_financial_statements(ticker: str, period: str = 'yearly') -> dict:
     """Fetch balance sheet, income statement, and cash flow for a given period."""
     stock = yf.Ticker(ticker)
 
-    # Select the appropriate financial statements based on the chosen period
     if period == 'quarterly':
         balance_sheet = stock.quarterly_balance_sheet
         income_stmt = stock.quarterly_income_stmt
@@ -64,12 +59,10 @@ def fetch_financial_statements(ticker: str, period: str = 'yearly') -> dict:
         income_stmt = stock.income_stmt
         cashflow = stock.cashflow
 
-    # Define the key financial metrics to extract from each statement
     balance_items = ['Total Assets', 'Total Liabilities Net Minority Interest', 'Stockholders Equity']
     income_items = ['Total Revenue', 'Net Income', 'Operating Income', 'EBITDA']
     cashflow_items = ['Operating Cash Flow', 'Free Cash Flow']
 
-    # Consolidate the financial data into a single dictionary
     return {
         'balance_sheet': get_recent_data(balance_sheet, balance_items),
         'income_statement': get_recent_data(income_stmt, income_items),
@@ -81,7 +74,6 @@ def fetch_financial_statements(ticker: str, period: str = 'yearly') -> dict:
 ################################ LangGraph State & Nodes ######################
 
 
-# Define the state that will be passed between nodes in the graph
 class AgentState(TypedDict):
     """Define the state structure for our agent."""
 
@@ -99,7 +91,6 @@ def fetch_data_node(state: AgentState) -> AgentState:
     ticker = state['ticker']
     period = state['period']
 
-    # Populate the state with data from the fetching functions
     state['price_data'] = fetch_stock_price(ticker)
     state['financial_data'] = fetch_financial_statements(ticker, period)
     state['messages'].append(f'✓ Fetched data for {ticker}')
@@ -109,12 +100,9 @@ def fetch_data_node(state: AgentState) -> AgentState:
 
 def analyze_financials_node(state: AgentState) -> AgentState:
     """Node 2: Use an LLM to analyze the collected financial data."""
-    # Initialize the LLM for the analysis task
-    # llm = ChatOllama(model=MODEL_NAME, temperature=0.2, base_url=OLLAMA_BASE_URL)
     price_data = state['price_data']
     financial_data = state['financial_data']
 
-    # Create a detailed prompt for the LLM to perform financial analysis
     prompt = f"""
         Analyze the following stock data for {state['ticker']}:
 
@@ -135,7 +123,6 @@ def analyze_financials_node(state: AgentState) -> AgentState:
 
         Keep your analysis under 300 words. Return the analysis in markdown format.
         """
-    # Invoke the LLM and update the state with the analysis
     state['analysis'] = llm.invoke(prompt).content
     state['messages'].append('✓ Completed financial analysis')
 
@@ -144,10 +131,6 @@ def analyze_financials_node(state: AgentState) -> AgentState:
 
 def generate_recommendation_node(state: AgentState) -> AgentState:
     """Node 3: Use an LLM to generate an investment recommendation."""
-    # Initialize a separate LLM instance for the recommendation task
-
-    # llm = ChatOllama(model='gpt-oss:latest', temperature=0.2, base_url=OLLAMA_BASE_URL)
-    # Create a prompt that uses the prior analysis to generate a recommendation
     prompt = f"""
         Based on the following analysis for {state['ticker']}:
 
@@ -160,7 +143,6 @@ def generate_recommendation_node(state: AgentState) -> AgentState:
 
         Keep your recommendation under 200 words and be direct. Return the recommendation in markdown format.
         """
-    # Invoke the LLM and update the state with the recommendation
     state['recommendation'] = llm.invoke(prompt).content
     state['messages'].append('✓ Generated investment recommendation')
 
@@ -174,21 +156,16 @@ def create_stock_analysis_graph():
     """Build and compile the LangGraph workflow."""
     workflow = StateGraph(AgentState)
 
-    # Register the functions as nodes in the graph
     workflow.add_node('fetch_data', fetch_data_node)
     workflow.add_node('analyze_financials', analyze_financials_node)
     workflow.add_node('generate_recommendation', generate_recommendation_node)
 
-    # Define the sequential flow of the agent's tasks
     workflow.set_entry_point('fetch_data')
     workflow.add_edge('fetch_data', 'analyze_financials')
     workflow.add_edge('analyze_financials', 'generate_recommendation')
-    workflow.add_edge('generate_recommendation', END)  # Mark the final node
-    app = workflow.compile()
-    # save the compiled graph for debugging
-    app.get_graph().draw_mermaid_png(output_file_path='agent_graph.png')
-    # Compile the graph into a runnable object
-    return app
+    workflow.add_edge('generate_recommendation', END)
+
+    return workflow.compile()
 
 
 ################################ Streamlit UI ################################
@@ -201,18 +178,16 @@ def main():
     st.title('📈 AI Stock Analysis Agent')
     st.markdown('Powered by **Ollama** + **LangChain** + **LangGraph** + **Streamlit**')
 
-    # Configure user inputs in the sidebar
     st.sidebar.header('⚙️ Configuration')
     ticker = st.sidebar.text_input('Stock Ticker', value='INTC').upper()
     period = st.sidebar.radio('Financial Period', ['yearly', 'quarterly'])
+    analyze_button = st.sidebar.button('🔍 Analyze Stock', type='primary')
 
-    # Initialize session state
+    # Initialize session state for results
     if 'analysis_result' not in st.session_state:
         st.session_state.analysis_result = None
-    if 'chat_history' not in st.session_state:
-        st.session_state.chat_history = []
 
-    if st.sidebar.button('🔍 Analyze Stock', type='primary'):
+    if analyze_button:
         with st.spinner('🤖 AI Agent is analyzing...'):
             initial_state = {
                 'ticker': ticker,
@@ -225,19 +200,19 @@ def main():
             }
             graph = create_stock_analysis_graph()
             result = graph.invoke(initial_state)
+
+            # Store result in session state and reset chat history
             st.session_state.analysis_result = result
             st.session_state.chat_history = []
 
+    # Display results if they exist in session state
     if st.session_state.analysis_result:
         result = st.session_state.analysis_result
-        st.success('Analysis complete!')
 
+        st.success('Analysis complete!')
         with st.expander('📋 Agent Progress Log'):
             for msg in result['messages']:
                 st.write(msg)
-
-        with st.expander('View Full Results:'):
-            st.write(result)
 
         tab1, tab2, tab3, tab4 = st.tabs(['📊 Price Data', '💰 Financials', '🔍 Analysis', '💡 Recommendation'])
 
@@ -245,7 +220,7 @@ def main():
             st.subheader(f'{result["price_data"].get("company_name", ticker)}')
             col1, col2, col3 = st.columns(3)
             with col1:
-                st.metric('Current Price', f'${result["price_data"].get("current_price"):.2f}')
+                st.metric('Current Price', f'${result["price_data"].get("current_price", 0):.2f}')
             with col2:
                 prev = result['price_data'].get('previous_close', 0)
                 curr = result['price_data'].get('current_price', 0)
@@ -256,7 +231,7 @@ def main():
                 st.metric('Market Cap', f'${market_cap / 1e9:.2f}B')
 
         with tab2:
-            st.subheader(f'Financial Statements ({period.capitalize()})')
+            st.subheader(f'Financial Statements ({result["period"].capitalize()})')
             col1, col2, col3 = st.columns(3)
             with col1:
                 st.write('**Balance Sheet**')
@@ -279,37 +254,43 @@ def main():
             st.subheader('💡 Investment Recommendation')
             st.markdown(result['recommendation'])
 
-        # Chat Interface
+        # ---------------- CHAT FUNCTIONALITY ----------------
         st.markdown('---')
-        st.subheader('💬 Chat with Results')
+        st.subheader(f'💬 Chat with {ticker} Analyst')
 
-        for msg in st.session_state.chat_history:
-            with st.chat_message(msg['role']):
-                st.markdown(msg['content'])
+        if 'chat_history' not in st.session_state:
+            st.session_state.chat_history = []
 
+        # Display chat messages
+        for message in st.session_state.chat_history:
+            with st.chat_message(message['role']):
+                st.markdown(message['content'])
+
+        # Chat input
         if prompt := st.chat_input('Ask questions about the analysis...'):
             st.session_state.chat_history.append({'role': 'user', 'content': prompt})
             with st.chat_message('user'):
                 st.markdown(prompt)
 
             with st.chat_message('assistant'):
-                with st.spinner('Thinking...'):
-                    context = f'Analysis for {result["ticker"]}:\nPrice: {result["price_data"]}\nFinancials: {result["financial_data"]}\nAnalysis: {result["analysis"]}\nRecommendation: {result["recommendation"]}'
-                    messages = [
-                        SystemMessage(content=f'You are a helpful financial assistant. Answer based on: {context}')
-                    ]
-                    for msg in st.session_state.chat_history:
-                        messages.append(
-                            HumanMessage(content=msg['content'])
-                            if msg['role'] == 'user'
-                            else AIMessage(content=msg['content'])
-                        )
+                # Construct context from the analysis result
+                context = f"""
+                Ticker: {result['ticker']}
+                Price Data: {result['price_data']}
+                Financials: {result['financial_data']}
+                Analysis: {result['analysis']}
+                Recommendation: {result['recommendation']}
+                """
+                
+                # Build conversation history
+                history = "\n".join([f"{msg['role']}: {msg['content']}" for msg in st.session_state.chat_history])
 
-                    response = llm.invoke(messages).content
-                    st.markdown(response)
-                    st.session_state.chat_history.append({'role': 'assistant', 'content': response})
+                # Generate response
+                response = llm.invoke(f'Context:\n{context}\n\nChat History:\n{history}\n\nUser Question: {prompt}').content
+                st.markdown(response)
+
+            st.session_state.chat_history.append({'role': 'assistant', 'content': response})
 
 
-# Define the entry point for the script
 if __name__ == '__main__':
     main()
