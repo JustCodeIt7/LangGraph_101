@@ -1,13 +1,13 @@
 import os
 from typing import TypedDict, List, Annotated
-from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage, HumanMessage
 from langgraph.graph import StateGraph, END
 from rich import print
 from pydantic import BaseModel, Field
+from langchain_openai import ChatOpenAI
 from langchain_ollama import ChatOllama
 
-################################ Model Initialization ################################
+################# Model Initialization ################
 
 OLLAMA_BASE_URL = os.getenv('OLLAMA_BASE_URL', 'http://localhost:11434')
 MODEL_NAME = 'llama3.2'
@@ -19,7 +19,7 @@ model = ChatOllama(
     base_url=OLLAMA_BASE_URL,
 )
 
-################################ Data Schema Definitions ################################
+#################### Data Schema Definitions ################
 
 
 # Define the shared state for the agentic workflow
@@ -37,7 +37,7 @@ class Evaluation(BaseModel):
     feedback: str = Field(description='Specific feedback on how to improve the joke.')
 
 
-################################ Graph Node Logic ################################
+################## Graph Node Logic ################
 
 
 def generator_node(state: AgentState):
@@ -76,17 +76,17 @@ def evaluator_node(state: AgentState):
     return {'score': result.score, 'feedback': result.feedback}
 
 
-################################ Workflow Control Flow ################################
+#################### Workflow Control Flow ############
 
 
 def should_continue(state: AgentState):
     # Terminate the loop if the quality threshold is met
-    if state['score'] >= 8:
+    if state['score'] >= 9:
         print('\n--- DECISION: GOOD ENOUGH ---')
         return END
 
     # Terminate the loop if the maximum retry limit is reached
-    if state['iteration'] >= 3:
+    if state['iteration'] >= 4:
         print('\n--- DECISION: MAX ITERATIONS REACHED ---')
         return END
 
@@ -94,7 +94,7 @@ def should_continue(state: AgentState):
     return 'generator'
 
 
-################################ Graph Assembly & Execution ################################
+##################### Graph Assembly & Execution ################
 
 builder = StateGraph(AgentState)
 
