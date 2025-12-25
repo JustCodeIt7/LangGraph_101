@@ -7,6 +7,18 @@ from rich import print
 from pydantic import BaseModel, Field
 from langchain_ollama import ChatOllama
 
+################################ Model Initialization ################################
+
+OLLAMA_BASE_URL = os.getenv('OLLAMA_BASE_URL', 'http://localhost:11434')
+MODEL_NAME = 'llama3.2'
+
+# Initialize the LLM client with local Ollama settings
+model = ChatOllama(
+    model=MODEL_NAME,
+    temperature=0.2,  # Lower temperature for more consistent evaluations
+    base_url=OLLAMA_BASE_URL,
+)
+
 ################################ Data Schema Definitions ################################
 
 
@@ -24,18 +36,6 @@ class Evaluation(BaseModel):
     score: int = Field(description='Score from 1 to 10, where 10 is the best.')
     feedback: str = Field(description='Specific feedback on how to improve the joke.')
 
-
-################################ Model Initialization ################################
-
-OLLAMA_BASE_URL = os.getenv('OLLAMA_BASE_URL', 'http://localhost:11434')
-MODEL_NAME = 'llama3.2'
-
-# Initialize the LLM client with local Ollama settings
-model = ChatOllama(
-    model=MODEL_NAME,
-    temperature=0.2,  # Lower temperature for more consistent evaluations
-    base_url=OLLAMA_BASE_URL,
-)
 
 ################################ Graph Node Logic ################################
 
