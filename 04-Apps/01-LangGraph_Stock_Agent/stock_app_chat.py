@@ -36,6 +36,17 @@ def fetch_stock_price(ticker: str) -> dict:
         'volume': history['Volume'].iloc[-1],
         'market_cap': info.get('marketCap', 0),
         'company_name': info.get('longName', ticker),
+        # Valuation Metrics
+        'pe_ratio': info.get('trailingPE'),
+        'forward_pe': info.get('forwardPE'),
+        'peg_ratio': info.get('pegRatio'),
+        'dividend_yield': info.get('dividendYield'),
+        # Analyst Data
+        'target_mean_price': info.get('targetMeanPrice'),
+        'recommendation_key': info.get('recommendationKey'),
+        # Technicals
+        'fifty_day_avg': info.get('fiftyDayAverage'),
+        'two_hundred_day_avg': info.get('twoHundredDayAverage'),
     }
 
 
@@ -110,6 +121,16 @@ def analyze_financials_node(state: AgentState) -> AgentState:
         - Company: {price_data.get('company_name')}
         - Current Price: ${price_data.get('current_price')}
         - Market Cap: ${price_data.get('market_cap')}
+        
+        VALUATION & TECHNICALS:
+        - P/E Ratio: {price_data.get('pe_ratio')}
+        - Forward P/E: {price_data.get('forward_pe')}
+        - PEG Ratio: {price_data.get('peg_ratio')}
+        - Dividend Yield: {price_data.get('dividend_yield')}
+        - 50-Day Avg: ${price_data.get('fifty_day_avg')}
+        - 200-Day Avg: ${price_data.get('two_hundred_day_avg')}
+        - Analyst Target: ${price_data.get('target_mean_price')}
+        - Analyst Rec: {price_data.get('recommendation_key')}
 
         FINANCIAL STATEMENTS ({financial_data.get('period')}):
         Balance Sheet: {json.dumps(financial_data.get('balance_sheet', {}), indent=2)}
@@ -118,8 +139,9 @@ def analyze_financials_node(state: AgentState) -> AgentState:
 
         Provide a concise analysis of:
         1. Financial health (profitability, liquidity, solvency)
-        2. Key trends and observations
-        3. Strengths and weaknesses
+        2. Valuation analysis (is it over/undervalued?)
+        3. Key trends and observations
+        4. Strengths and weaknesses
 
         Keep your analysis under 300 words. Return the analysis in markdown format.
         """
@@ -218,6 +240,14 @@ def main():
 
         with tab1:
             st.subheader(f'{result["price_data"].get("company_name", ticker)}')
+
+            st.markdown('### Key Metrics')
+            m1, m2, m3, m4 = st.columns(4)
+            m1.metric('P/E Ratio', f'{result["price_data"].get("pe_ratio", "N/A"):.2f}')
+
+            m3.metric('50-Day Avg', f'${result["price_data"].get("fifty_day_avg", 0):.2f}')
+            m4.metric('Analyst Target', f'${result["price_data"].get("target_mean_price", 0):.2f}')
+
             col1, col2, col3 = st.columns(3)
             with col1:
                 st.metric('Current Price', f'${result["price_data"].get("current_price", 0):.2f}')
