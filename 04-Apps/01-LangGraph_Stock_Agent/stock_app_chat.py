@@ -1,4 +1,4 @@
-########### Imports & Configuration ########
+################################ Imports & Configuration ################################
 
 import streamlit as st
 import yfinance as yf
@@ -9,42 +9,42 @@ from langchain_ollama import ChatOllama
 from dotenv import load_dotenv
 import os
 
-load_dotenv()  # Load environment variables from .env file if present
+load_dotenv()
 
 OLLAMA_BASE_URL = os.getenv('OLLAMA_BASE_URL', 'http://localhost:11434')
 MODEL_NAME = 'gpt-oss:20b'
 
+# Initialize the Large Language Model with a low temperature for consistent analysis
 llm = ChatOllama(model=MODEL_NAME, temperature=0.2, base_url=OLLAMA_BASE_URL)
 
 
-################################ Data Fetching Functions ###################
+################################ Data Fetching Functions ################################
+
 def fetch_stock_price(ticker: str) -> dict:
     """Fetch current stock price and basic company information."""
     stock = yf.Ticker(ticker)
     info = stock.info
     history = stock.history(period='1y')
 
+    # Return empty dict if no market data is found to prevent downstream errors
     if history.empty:
         return {}
 
     return {
         'ticker': ticker,
-        'current_price': history['Close'].iloc[-1],
+        'current_price': history['Close'].iloc[-1], # Get the most recent closing price
         'previous_close': info.get('previousClose', 0),
         'day_high': history['High'].iloc[-1],
         'day_low': history['Low'].iloc[-1],
         'volume': history['Volume'].iloc[-1],
         'market_cap': info.get('marketCap', 0),
         'company_name': info.get('longName', ticker),
-        # Valuation Metrics
         'pe_ratio': info.get('trailingPE'),
         'forward_pe': info.get('forwardPE'),
         'peg_ratio': info.get('pegRatio'),
         'dividend_yield': info.get('dividendYield'),
-        # Analyst Data
         'target_mean_price': info.get('targetMeanPrice'),
         'recommendation_key': info.get('recommendationKey'),
-        # Technicals
         'fifty_day_avg': info.get('fiftyDayAverage'),
         'two_hundred_day_avg': info.get('twoHundredDayAverage'),
         'price_history': history['Close'],
@@ -55,6 +55,7 @@ def get_recent_data(df, items):
     """Extract a list of items from the most recent column of a dataframe."""
     if df.empty:
         return {}
+    # Use dictionary comprehension to map specific rows to their latest values
     return {item: df.loc[item].iloc[0] for item in items if item in df.index}
 
 
@@ -62,6 +63,7 @@ def fetch_financial_statements(ticker: str, period: str = 'yearly') -> dict:
     """Fetch balance sheet, income statement, and cash flow for a given period."""
     stock = yf.Ticker(ticker)
 
+    # Toggle between quarterly and annual report data
     if period == 'quarterly':
         balance_sheet = stock.quarterly_balance_sheet
         income_stmt = stock.quarterly_income_stmt
@@ -71,6 +73,7 @@ def fetch_financial_statements(ticker: str, period: str = 'yearly') -> dict:
         income_stmt = stock.income_stmt
         cashflow = stock.cashflow
 
+    # Define the specific accounting line items needed for analysis
     balance_items = ['Total Assets', 'Total Liabilities Net Minority Interest', 'Stockholders Equity']
     income_items = ['Total Revenue', 'Net Income', 'Operating Income', 'EBITDA']
     cashflow_items = ['Operating Cash Flow', 'Free Cash Flow']
@@ -83,7 +86,7 @@ def fetch_financial_statements(ticker: str, period: str = 'yearly') -> dict:
     }
 
 
-################################ LangGraph State & Nodes ######################
+################################ LangGraph State & Nodes ################################
 
 
 class AgentState(TypedDict):
@@ -103,6 +106,7 @@ def fetch_data_node(state: AgentState) -> AgentState:
     ticker = state['ticker']
     period = state['period']
 
+    # Populate the state with fresh market and financial data
     state['price_data'] = fetch_stock_price(ticker)
     state['financial_data'] = fetch_financial_statements(ticker, period)
     state['messages'].append(f'✓ Fetched data for {ticker}')
@@ -115,6 +119,7 @@ def analyze_financials_node(state: AgentState) -> AgentState:
     price_data = state['price_data']
     financial_data = state['financial_data']
 
+    # Construct a detailed prompt including the raw data context
     prompt = f"""
         You are a seasoned Wall Street financial analyst. Your task is to analyze the following stock data for {state['ticker']} and provide a professional assessment.
 
@@ -148,7 +153,7 @@ def analyze_financials_node(state: AgentState) -> AgentState:
 
         Format your response in clean Markdown with clear headings.
         """
-    state['analysis'] = llm.invoke(prompt).content
+    state['analysis'] = llm.invoke(prompt).content # Store the LLM response in state
     state['messages'].append('✓ Completed financial analysis')
 
     return state
@@ -156,6 +161,7 @@ def analyze_financials_node(state: AgentState) -> AgentState:
 
 def generate_recommendation_node(state: AgentState) -> AgentState:
     """Node 3: Use an LLM to generate an investment recommendation."""
+    # Build strategy based on the qualitative analysis from the previous node
     prompt = f"""
         You are a Senior Portfolio Manager. Based on the detailed analysis below for {state['ticker']}, formulate a strategic investment recommendation.
 
@@ -180,17 +186,19 @@ def generate_recommendation_node(state: AgentState) -> AgentState:
     return state
 
 
-################################ LangGraph Workflow Construction #################
+################################ LangGraph Workflow Construction ################################
 
 
 def create_stock_analysis_graph():
     """Build and compile the LangGraph workflow."""
     workflow = StateGraph(AgentState)
 
+    # Register the functions as workflow nodes
     workflow.add_node('fetch_data', fetch_data_node)
     workflow.add_node('analyze_financials', analyze_financials_node)
     workflow.add_node('generate_recommendation', generate_recommendation_node)
 
+    # Define the execution sequence (Directed Acyclic Graph)
     workflow.set_entry_point('fetch_data')
     workflow.add_edge('fetch_data', 'analyze_financials')
     workflow.add_edge('analyze_financials', 'generate_recommendation')
@@ -209,17 +217,19 @@ def main():
     st.title('📈 AI Stock Analysis Agent')
     st.markdown('Powered by **Ollama** + **LangChain** + **LangGraph** + **Streamlit**')
 
+    # Sidebar for user inputs
     st.sidebar.header('⚙️ Configuration')
     ticker = st.sidebar.text_input('Stock Ticker', value='INTC').upper()
     period = st.sidebar.radio('Financial Period', ['yearly', 'quarterly'])
     analyze_button = st.sidebar.button('🔍 Analyze Stock', type='primary')
 
-    # Initialize session state for results
+    # Maintain state across user interactions to prevent re-running the graph
     if 'analysis_result' not in st.session_state:
         st.session_state.analysis_result = None
 
     if analyze_button:
         with st.spinner('🤖 AI Agent is analyzing...'):
+            # Define the initial data structure to kick off the graph
             initial_state = {
                 'ticker': ticker,
                 'period': period,
@@ -232,15 +242,15 @@ def main():
             graph = create_stock_analysis_graph()
             result = graph.invoke(initial_state)
 
-            # Store result in session state and reset chat history
             st.session_state.analysis_result = result
             st.session_state.chat_history = []
 
-    # Display results if they exist in session state
+    # Check if a successful analysis exists before rendering results
     if st.session_state.analysis_result:
         result = st.session_state.analysis_result
 
         st.success('Analysis complete!')
+        # Show the step-by-step progress from the agent graph
         with st.expander('📋 Agent Progress Log'):
             for msg in result['messages']:
                 st.write(msg)
@@ -261,6 +271,7 @@ def main():
             with col1:
                 st.metric('Current Price', f'${result["price_data"].get("current_price", 0):.2f}')
             with col2:
+                # Calculate percentage change from previous day close
                 prev = result['price_data'].get('previous_close', 0)
                 curr = result['price_data'].get('current_price', 0)
                 change = ((curr - prev) / prev) * 100 if prev else 0
@@ -270,11 +281,12 @@ def main():
                 st.metric('Market Cap', f'${market_cap / 1e9:.2f}B')
 
             st.subheader('Price History (1 Year)')
-            st.line_chart(result['price_data']['price_history'], height=500)
+            st.line_chart(result['price_data']['price_history'], height=400)
 
         with tab2:
             st.subheader(f'Financial Statements ({result["period"].capitalize()})')
             col1, col2, col3 = st.columns(3)
+            # Display financial items normalized to Billions for readability
             with col1:
                 st.write('**Balance Sheet**')
                 for key, value in result['financial_data'].get('balance_sheet', {}).items():
@@ -296,26 +308,26 @@ def main():
             st.subheader('💡 Investment Recommendation')
             st.markdown(result['recommendation'])
 
-        # ---------------- CHAT FUNCTIONALITY ----------------
+        ################################ Chat Functionality ################################
         st.markdown('---')
         st.subheader(f'💬 Chat with {ticker} Analyst')
 
         if 'chat_history' not in st.session_state:
             st.session_state.chat_history = []
 
-        # Display chat messages
+        # Render the existing conversation thread
         for message in st.session_state.chat_history:
             with st.chat_message(message['role']):
                 st.markdown(message['content'])
 
-        # Chat input
+        # Handle user interaction and agent response
         if prompt := st.chat_input('Ask questions about the analysis...'):
             st.session_state.chat_history.append({'role': 'user', 'content': prompt})
             with st.chat_message('user'):
                 st.markdown(prompt)
 
             with st.chat_message('assistant'):
-                # Construct context from the analysis result
+                # Provide all gathered data as background context for the chat LLM
                 context = f"""
                 Ticker: {result['ticker']}
                 Price Data: {result['price_data']}
@@ -324,10 +336,10 @@ def main():
                 Recommendation: {result['recommendation']}
                 """
                 
-                # Build conversation history
+                # Format previous messages to maintain continuity
                 history = "\n".join([f"{msg['role']}: {msg['content']}" for msg in st.session_state.chat_history])
 
-                # Generate response
+                # Query the model with full situational awareness
                 response = llm.invoke(f'Context:\n{context}\n\nChat History:\n{history}\n\nUser Question: {prompt}').content
                 st.markdown(response)
 
