@@ -170,6 +170,7 @@ def generate_recommendation_node(state: AgentState) -> AgentState:
         3. **Actionable Rating**: Buy, Sell, or Hold.
         4. **Risk Profile**: Low, Medium, or High risk, with a brief explanation why.
         5. **Key Rationale**: The top 3 reasons supporting your decision.
+        6. **Trading Strategy**: Suggest a specific trading approach (e.g., Dollar Cost Averaging, Buy the Dip, Options Strategy, or Immediate Entry/Exit) tailored to the current volatility and price action.
 
         Keep the tone professional and decisive. Limit to 250 words. Return in Markdown.
         """
