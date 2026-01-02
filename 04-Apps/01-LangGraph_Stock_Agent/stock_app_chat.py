@@ -12,7 +12,7 @@ import os
 load_dotenv()  # Load environment variables from .env file if present
 
 OLLAMA_BASE_URL = os.getenv('OLLAMA_BASE_URL', 'http://localhost:11434')
-MODEL_NAME = 'llama3.2'
+MODEL_NAME = 'gpt-oss:20b'
 
 llm = ChatOllama(model=MODEL_NAME, temperature=0.2, base_url=OLLAMA_BASE_URL)
 
@@ -116,35 +116,37 @@ def analyze_financials_node(state: AgentState) -> AgentState:
     financial_data = state['financial_data']
 
     prompt = f"""
-        Analyze the following stock data for {state['ticker']}:
+        You are a seasoned Wall Street financial analyst. Your task is to analyze the following stock data for {state['ticker']} and provide a professional assessment.
 
-        CURRENT PRICE INFORMATION:
+        ### 1. MARKET DATA
         - Company: {price_data.get('company_name')}
         - Current Price: ${price_data.get('current_price')}
         - Market Cap: ${price_data.get('market_cap')}
+        - 50-Day Avg: ${price_data.get('fifty_day_avg')}
+        - 200-Day Avg: ${price_data.get('two_hundred_day_avg')}
         
-        VALUATION & TECHNICALS:
+        ### 2. VALUATION & ANALYST SENTIMENT
         - P/E Ratio: {price_data.get('pe_ratio')}
         - Forward P/E: {price_data.get('forward_pe')}
         - PEG Ratio: {price_data.get('peg_ratio')}
         - Dividend Yield: {price_data.get('dividend_yield')}
-        - 50-Day Avg: ${price_data.get('fifty_day_avg')}
-        - 200-Day Avg: ${price_data.get('two_hundred_day_avg')}
         - Analyst Target: ${price_data.get('target_mean_price')}
-        - Analyst Rec: {price_data.get('recommendation_key')}
+        - Analyst Consensus: {price_data.get('recommendation_key')}
 
-        FINANCIAL STATEMENTS ({financial_data.get('period')}):
-        Balance Sheet: {json.dumps(financial_data.get('balance_sheet', {}), indent=2)}
-        Income Statement: {json.dumps(financial_data.get('income_statement', {}), indent=2)}
-        Cash Flow: {json.dumps(financial_data.get('cash_flow', {}), indent=2)}
+        ### 3. FINANCIAL STATEMENTS ({financial_data.get('period')})
+        Balance Sheet Highlights: {json.dumps(financial_data.get('balance_sheet', {}), indent=2)}
+        Income Statement Highlights: {json.dumps(financial_data.get('income_statement', {}), indent=2)}
+        Cash Flow Highlights: {json.dumps(financial_data.get('cash_flow', {}), indent=2)}
 
-        Provide a concise analysis of:
-        1. Financial health (profitability, liquidity, solvency)
-        2. Valuation analysis (is it over/undervalued?)
-        3. Key trends and observations
-        4. Strengths and weaknesses
+        ### INSTRUCTIONS
+        Provide a comprehensive but concise analysis (approx 400 words) covering:
+        
+        1. **Financial Health**: Assess profitability margins, liquidity, and solvency based on the statements.
+        2. **Valuation Check**: Compare current price to moving averages and analyst targets. Interpret the P/E and PEG ratios.
+        3. **Trend Analysis**: Identify positive or negative trends in revenue, net income, or cash flow.
+        4. **Risk Assessment**: Highlight any potential red flags or areas of concern.
 
-        Keep your analysis under 300 words. Return the analysis in markdown format.
+        Format your response in clean Markdown with clear headings.
         """
     state['analysis'] = llm.invoke(prompt).content
     state['messages'].append('✓ Completed financial analysis')
@@ -155,16 +157,21 @@ def analyze_financials_node(state: AgentState) -> AgentState:
 def generate_recommendation_node(state: AgentState) -> AgentState:
     """Node 3: Use an LLM to generate an investment recommendation."""
     prompt = f"""
-        Based on the following analysis for {state['ticker']}:
+        You are a Senior Portfolio Manager. Based on the detailed analysis below for {state['ticker']}, formulate a strategic investment recommendation.
 
+        ### FINANCIAL ANALYSIS
         {state['analysis']}
 
-        Provide a clear investment recommendation:
-        1. Overall sentiment (Bullish/Bearish/Neutral)
-        2. Risk level (Low/Medium/High)
-        3. Brief recommendation (Buy/Hold/Sell) with reasoning
+        ### INSTRUCTIONS
+        Provide a structured recommendation including:
+        
+        1. **Executive Summary**: A 1-sentence verdict.
+        2. **Investment Stance**: Clearly state Bullish, Bearish, or Neutral.
+        3. **Actionable Rating**: Buy, Sell, or Hold.
+        4. **Risk Profile**: Low, Medium, or High risk, with a brief explanation why.
+        5. **Key Rationale**: The top 3 reasons supporting your decision.
 
-        Keep your recommendation under 200 words and be direct. Return the recommendation in markdown format.
+        Keep the tone professional and decisive. Limit to 250 words. Return in Markdown.
         """
     state['recommendation'] = llm.invoke(prompt).content
     state['messages'].append('✓ Generated investment recommendation')
