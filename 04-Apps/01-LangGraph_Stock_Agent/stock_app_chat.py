@@ -22,7 +22,7 @@ def fetch_stock_price(ticker: str) -> dict:
     """Fetch current stock price and basic company information."""
     stock = yf.Ticker(ticker)
     info = stock.info
-    history = stock.history(period='1d')
+    history = stock.history(period='1y')
 
     if history.empty:
         return {}
@@ -47,6 +47,7 @@ def fetch_stock_price(ticker: str) -> dict:
         # Technicals
         'fifty_day_avg': info.get('fiftyDayAverage'),
         'two_hundred_day_avg': info.get('twoHundredDayAverage'),
+        'price_history': history['Close'],
     }
 
 
@@ -259,6 +260,9 @@ def main():
             with col3:
                 market_cap = result['price_data'].get('market_cap', 0)
                 st.metric('Market Cap', f'${market_cap / 1e9:.2f}B')
+
+            st.subheader('Price History (1 Year)')
+            st.line_chart(result['price_data']['price_history'], height=500)
 
         with tab2:
             st.subheader(f'Financial Statements ({result["period"].capitalize()})')
