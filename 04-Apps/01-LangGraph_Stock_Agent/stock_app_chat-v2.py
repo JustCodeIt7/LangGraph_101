@@ -254,6 +254,9 @@ def main():
         with st.expander('📋 Agent Progress Log'):
             for msg in result['messages']:
                 st.write(msg)
+            st.markdown("---")
+            st.write("### Session State")
+            st.write(st.session_state)
 
         tab1, tab2, tab3, tab4 = st.tabs(['📊 Price Data', '💰 Financials', '🔍 Analysis', '💡 Recommendation'])
 
@@ -310,7 +313,14 @@ def main():
 
         ################################ Chat Functionality ################################
         st.markdown('---')
-        st.subheader(f'💬 Chat with {ticker} Analyst')
+        
+        col1, col2 = st.columns([6, 1])
+        with col1:
+            st.subheader(f'💬 Chat with {ticker} Analyst')
+        with col2:
+            if st.button('Clear Chat'):
+                st.session_state.chat_history = []
+                st.rerun()
 
         if 'chat_history' not in st.session_state:
             st.session_state.chat_history = []
