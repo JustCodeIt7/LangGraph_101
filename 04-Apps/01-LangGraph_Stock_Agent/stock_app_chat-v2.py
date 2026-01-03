@@ -223,6 +223,10 @@ def main():
     period = st.sidebar.radio('Financial Period', ['yearly', 'quarterly'])
     analyze_button = st.sidebar.button('🔍 Analyze Stock', type='primary')
 
+    if st.sidebar.button('Clear Chat'):
+        st.session_state.chat_history = []
+        st.rerun()
+
     # Maintain state across user interactions to prevent re-running the graph
     if 'analysis_result' not in st.session_state:
         st.session_state.analysis_result = None
@@ -313,14 +317,7 @@ def main():
 
         ################################ Chat Functionality ################################
         st.markdown('---')
-        
-        col1, col2 = st.columns([6, 1])
-        with col1:
-            st.subheader(f'💬 Chat with {ticker} Analyst')
-        with col2:
-            if st.button('Clear Chat'):
-                st.session_state.chat_history = []
-                st.rerun()
+        st.subheader(f'💬 Chat with {ticker} Analyst')
 
         if 'chat_history' not in st.session_state:
             st.session_state.chat_history = []
