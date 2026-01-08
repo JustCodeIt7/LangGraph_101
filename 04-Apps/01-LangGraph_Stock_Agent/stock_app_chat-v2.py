@@ -1,4 +1,4 @@
-################################ Imports & Configuration ################################
+#################### Imports & Configuration ####################
 
 import streamlit as st
 import yfinance as yf
@@ -8,6 +8,7 @@ import json
 from langchain_ollama import ChatOllama
 from dotenv import load_dotenv
 import os
+from rich import print
 
 load_dotenv()
 
@@ -18,7 +19,7 @@ MODEL_NAME = 'gpt-oss:20b'
 llm = ChatOllama(model=MODEL_NAME, temperature=0.2, base_url=OLLAMA_BASE_URL)
 
 
-################################ Data Fetching Functions ################################
+#################### Data Fetching Functions ####################
 
 def fetch_stock_price(ticker: str) -> dict:
     """Fetch current stock price and basic company information."""
@@ -86,7 +87,7 @@ def fetch_financial_statements(ticker: str, period: str = 'yearly') -> dict:
     }
 
 
-################################ LangGraph State & Nodes ################################
+#################### LangGraph State & Nodes ####################
 
 
 class AgentState(TypedDict):
@@ -129,7 +130,7 @@ def analyze_financials_node(state: AgentState) -> AgentState:
         - Market Cap: ${price_data.get('market_cap')}
         - 50-Day Avg: ${price_data.get('fifty_day_avg')}
         - 200-Day Avg: ${price_data.get('two_hundred_day_avg')}
-        
+
         ### 2. VALUATION & ANALYST SENTIMENT
         - P/E Ratio: {price_data.get('pe_ratio')}
         - Forward P/E: {price_data.get('forward_pe')}
@@ -145,7 +146,7 @@ def analyze_financials_node(state: AgentState) -> AgentState:
 
         ### INSTRUCTIONS
         Provide a comprehensive but concise analysis (approx 400 words) covering:
-        
+
         1. **Financial Health**: Assess profitability margins, liquidity, and solvency based on the statements.
         2. **Valuation Check**: Compare current price to moving averages and analyst targets. Interpret the P/E and PEG ratios.
         3. **Trend Analysis**: Identify positive or negative trends in revenue, net income, or cash flow.
@@ -170,7 +171,7 @@ def generate_recommendation_node(state: AgentState) -> AgentState:
 
         ### INSTRUCTIONS
         Provide a structured recommendation including:
-        
+
         1. **Executive Summary**: A 1-sentence verdict.
         2. **Investment Stance**: Clearly state Bullish, Bearish, or Neutral.
         3. **Actionable Rating**: Buy, Sell, or Hold.
@@ -186,7 +187,7 @@ def generate_recommendation_node(state: AgentState) -> AgentState:
     return state
 
 
-################################ LangGraph Workflow Construction ################################
+#################### LangGraph Workflow Construction ####################
 
 
 def create_stock_analysis_graph():
@@ -207,7 +208,7 @@ def create_stock_analysis_graph():
     return workflow.compile()
 
 
-################################ Streamlit UI ################################
+#################### Streamlit UI ####################
 
 
 def main():
@@ -218,6 +219,7 @@ def main():
     st.markdown('Powered by **Ollama** + **LangChain** + **LangGraph** + **Streamlit**')
 
     # Sidebar for user inputs
+
     st.sidebar.header('⚙️ Configuration')
     ticker = st.sidebar.text_input('Stock Ticker', value='INTC').upper()
     period = st.sidebar.radio('Financial Period', ['yearly', 'quarterly'])
@@ -253,26 +255,26 @@ def main():
     if st.session_state.analysis_result:
         result = st.session_state.analysis_result
 
-        st.success('Analysis complete!')
+        # st.success('Analysis complete!')
         # Show the step-by-step progress from the agent graph
         with st.expander('📋 Agent Progress Log'):
             for msg in result['messages']:
                 st.write(msg)
-            st.markdown("---")
+
             st.write("### Session State")
-            st.write(st.session_state)
+            st.json(st.session_state,expanded=False )
 
         tab1, tab2, tab3, tab4 = st.tabs(['📊 Price Data', '💰 Financials', '🔍 Analysis', '💡 Recommendation'])
 
         with tab1:
-            st.subheader(f'{result["price_data"].get("company_name", ticker)}')
+            st.markdown(f'### {result["price_data"].get("company_name", ticker)}')
 
-            st.markdown('### Key Metrics')
-            m1, m2, m3, m4 = st.columns(4)
+            st.markdown('#### Key Metrics')
+            m1, m2, m3= st.columns(3)
             m1.metric('P/E Ratio', f'{result["price_data"].get("pe_ratio", "N/A"):.2f}')
 
-            m3.metric('50-Day Avg', f'${result["price_data"].get("fifty_day_avg", 0):.2f}')
-            m4.metric('Analyst Target', f'${result["price_data"].get("target_mean_price", 0):.2f}')
+            m2.metric('50-Day Avg', f'${result["price_data"].get("fifty_day_avg", 0):.2f}')
+            m3.metric('Analyst Target', f'${result["price_data"].get("target_mean_price", 0):.2f}')
 
             col1, col2, col3 = st.columns(3)
             with col1:
@@ -288,7 +290,7 @@ def main():
                 st.metric('Market Cap', f'${market_cap / 1e9:.2f}B')
 
             st.subheader('Price History (1 Year)')
-            st.line_chart(result['price_data']['price_history'], height=400)
+            st.line_chart(result['price_data']['price_history'], height=300)
 
         with tab2:
             st.subheader(f'Financial Statements ({result["period"].capitalize()})')
@@ -315,7 +317,7 @@ def main():
             st.subheader('💡 Investment Recommendation')
             st.markdown(result['recommendation'])
 
-        ################################ Chat Functionality ################################
+        #################### Chat Functionality ####################
         st.markdown('---')
         st.subheader(f'💬 Chat with {ticker} Analyst')
 
@@ -342,7 +344,7 @@ def main():
                 Analysis: {result['analysis']}
                 Recommendation: {result['recommendation']}
                 """
-                
+
                 # Format previous messages to maintain continuity
                 history = "\n".join([f"{msg['role']}: {msg['content']}" for msg in st.session_state.chat_history])
 

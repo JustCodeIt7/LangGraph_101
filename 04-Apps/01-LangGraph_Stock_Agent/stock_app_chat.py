@@ -8,6 +8,7 @@ import json
 from langchain_ollama import ChatOllama
 from dotenv import load_dotenv
 import os
+from rich import print
 
 load_dotenv()
 
@@ -18,7 +19,7 @@ MODEL_NAME = 'gpt-oss:20b'
 llm = ChatOllama(model=MODEL_NAME, temperature=0.2, base_url=OLLAMA_BASE_URL)
 
 
-################################ Data Fetching Functions ################################
+#################### Data Fetching Functions ####################
 
 def fetch_stock_price(ticker: str) -> dict:
     """Fetch current stock price and basic company information."""
@@ -32,7 +33,7 @@ def fetch_financial_statements(ticker: str, period: str = 'yearly') -> dict:
     """Fetch balance sheet, income statement, and cash flow for a given period."""
 
 
-################################ LangGraph State & Nodes ################################
+#################### LangGraph State & Nodes ####################
 
 
 class AgentState(TypedDict):
@@ -59,14 +60,14 @@ def generate_recommendation_node(state: AgentState) -> AgentState:
     """Node 3: Use an LLM to generate an investment recommendation."""
 
 
-################################ LangGraph Workflow Construction ################################
+#################### LangGraph Workflow Construction ####################
 
 
 def create_stock_analysis_graph():
     """Build and compile the LangGraph workflow."""
 
 
-################################ Streamlit UI ################################
+#################### Streamlit UI ####################
 
 
 def main():

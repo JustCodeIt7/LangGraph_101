@@ -69,36 +69,47 @@ Explore core LangGraph concepts and graph-based workflows:
 
 Dive into advanced agent implementations and patterns:
 
-- **[01-Running_Agents](https://www.google.com/search?q=02-Agents/01-Running_Agents/)**: Basic agent setup and execution.
-- **[02-Agent-State](https://www.google.com/search?q=02-Agents/02-Agent-State/)**: Managing complex agent state.
-- **[02-Streaming](https://www.google.com/search?q=02-Agents/02-Streaming/)**: Implementing streaming responses.
-- **[03-Models](https://www.google.com/search?q=02-Agents/03-Models/)**: Working with different LLM providers.
-- **[04-Tools-v2](https://www.google.com/search?q=02-Agents/04-Tools-v2/)**: Advanced tool usage and integration.
-- **[05-MCP](https://www.google.com/search?q=02-Agents/05-MCP/)**: Multi-agent coordination patterns.
-- **[06-Context](https://www.google.com/search?q=02-Agents/06-Context/)**: Context management strategies.
-- **[07-Memory](https://www.google.com/search?q=02-Agents/07-Memory/)**: Implementing agent memory.
-- **[08-Human_in_the_Loop](https://www.google.com/search?q=02-Agents/08-Human_in_the_Loop/)**: Human intervention patterns.
-- **[09-Advanced-Agent-Examples-v2](https://www.google.com/search?q=02-Agents/09-Advanced-Agent-Examples-v2/)**: Complex agent implementations.
-- **[09-Multi_Agent](https://www.google.com/search?q=02-Agents/09-Multi_Agent/)**: Multi-agent systems.
-- **[10-RAG_Agent](https://www.google.com/search?q=02-Agents/10-RAG_Agent/)**: Retrieval-Augmented Generation agents.
+- **[08-Running_Agents](https://www.google.com/search?q=02-Agents/08-Running_Agents/)**: Basic agent setup and execution.
+- **[09-Agent-State](https://www.google.com/search?q=02-Agents/09-Agent-State/)**: Managing complex agent state.
+- **[09-Persistence](https://www.google.com/search?q=02-Agents/09-Persistence/)**: Agent persistence and checkpointing for state management.
+- **[10-Streaming](https://www.google.com/search?q=02-Agents/10-Streaming/)**: Comprehensive streaming capabilities including agent progress, LLM tokens, and custom updates.
+- **[10-Tools](https://www.google.com/search?q=02-Agents/10-Tools/)**: Tool integration patterns and examples.
+- **[11-Chainlit_Agent](https://www.google.com/search?q=02-Agents/11-Chainlit_Agent/)**: Chainlit integration for agent interfaces.
+- **[12-Tools-v2](https://www.google.com/search?q=02-Agents/12-Tools-v2/)**: Advanced tool usage, error handling, and integration patterns.
+- **[13-MCP](https://www.google.com/search?q=02-Agents/13-MCP/)**: Model Context Protocol (MCP) tools integration and custom tool creation.
+- **[14-Chainlit_Stock_Agent](https://www.google.com/search?q=02-Agents/14-Chainlit_Stock_Agent/)**: Stock analysis agent with Chainlit interface.
+- **[15-Memory](https://www.google.com/search?q=02-Agents/15-Memory/)**: Agent memory implementations and patterns.
+- **[17-Subgraphs](https://www.google.com/search?q=02-Agents/17-Subgraphs/)**: Subgraph functionality for modular agent design.
 
-### 03-Apps
+### 03-Agent_Design_Patterns
+
+Explore advanced agent design patterns and architectures:
+
+- **[20-Multi_Agent_Router](https://www.google.com/search?q=03-Agent_Design_Patterns/20-Multi_Agent_Router/)**: Multi-agent routing patterns.
+- **[25-RAG_Agent](https://www.google.com/search?q=03-Agent_Design_Patterns/25-RAG_Agent/)**: Retrieval-Augmented Generation agent patterns.
+
+### 04-Apps
 
 Explore complete real-world application examples:
 
-- **[01-LangGraph_Stock_Agent](https://www.google.com/search?q=03-Apps/01-LangGraph_Stock_Agent/)**: Financial data analysis.
-- **[01-Travel_Planning_Agent](https://www.google.com/search?q=03-Apps/01-Travel_Planning_Agent/)**: Trip planning assistant.
-- **[02-Finance_Investment_Agent](https://www.google.com/search?q=03-Apps/02-Finance_Investment_Agent/)**: Investment advisory system.
-- **[03-Customer_Support_Agent](https://www.google.com/search?q=03-Apps/03-Customer_Support_Agent/)**: Customer service automation.
-- **[04-Medical_Appointment_Scheduler_Agent](https://www.google.com/search?q=03-Apps/04-Medical_Appointment_Scheduler_Agent/)**: Healthcare scheduling.
-- **[05-Smart_Home_Automation_Agent](https://www.google.com/search?q=03-Apps/05-Smart_Home_Automation_Agent/)**: IoT control system.
-- **[06-Developer_Assistant_Agent](https://www.google.com/search?q=03-Apps/06-Developer_Assistant_Agent/)**: Code assistance and review.
-- **[07-Legal_Document_Analyzer_Agent](https://www.google.com/search?q=03-Apps/07-Legal_Document_Analyzer_Agent/)**: Legal document processing.
-- **[08-Content_Creation_Pipeline_Agent](https://www.google.com/search?q=03-Apps/08-Content_Creation_Pipeline_Agent/)**: Content generation workflow.
-- **[09-Research_Summarization_Agent](https://www.google.com/search?q=03-Apps/09-Research_Summarization_Agent/)**: Academic research assistant.
-- **[10-Personalized_Health_Fitness_Planner_Agent](https://www.google.com/search?q=03-Apps/10-Personalized_Health_Fitness_Planner_Agent/)**: Health and fitness planning.
-- **[11-E-commerce_Recommendation_Agent](https://www.google.com/search?q=03-Apps/11-E-commerce_Recommendation_Agent/)**: Product recommendation system.
-- **[12-Interactive_Storyteller_Agent](https://www.google.com/search?q=03-Apps/12-Interactive_Storyteller_Agent/)**: Creative storytelling assistant.
+- **[01-LangGraph_Stock_Agent](https://www.google.com/search?q=04-Apps/01-LangGraph_Stock_Agent/)**: Financial data analysis.
+- **[01-Travel_Planning_Agent](https://www.google.com/search?q=04-Apps/01-Travel_Planning_Agent/)**: Trip planning assistant.
+- **[02-Finance_Investment_Agent](https://www.google.com/search?q=04-Apps/02-Finance_Investment_Agent/)**: Investment advisory system.
+- **[03-Customer_Support_Agent](https://www.google.com/search?q=04-Apps/03-Customer_Support_Agent/)**: Customer service automation.
+- **[06-Developer_Assistant_Agent](https://www.google.com/search?q=04-Apps/06-Developer_Assistant_Agent/)**: Code assistance and review.
+- **[07-Legal_Document_Analyzer_Agent](https://www.google.com/search?q=04-Apps/07-Legal_Document_Analyzer_Agent/)**: Legal document processing.
+- **[08-Content_Creation_Pipeline_Agent](https://www.google.com/search?q=04-Apps/08-Content_Creation_Pipeline_Agent/)**: Content generation workflow.
+- **[09-Research_Summarization_Agent](https://www.google.com/search?q=04-Apps/09-Research_Summarization_Agent/)**: Academic research assistant.
+- **[10-Personalized_Health_Fitness_Planner_Agent](https://www.google.com/search?q=04-Apps/10-Personalized_Health_Fitness_Planner_Agent/)**: Health and fitness planning.
+- **[11-E-commerce_Recommendation_Agent](https://www.google.com/search?q=04-Apps/11-E-commerce_Recommendation_Agent/)**: Product recommendation system.
+- **[12-DeepResearch_Agent](https://www.google.com/search?q=04-Apps/12-DeepResearch_Agent/)**: Advanced research agent with Chainlit interface.
+- **[14-Invoice_Parser](https://www.google.com/search?q=04-Apps/14-Invoice_Parser/)**: Invoice parsing and processing.
+
+### 04-LangGraph_Studio
+
+Explore LangGraph Studio integration and development:
+
+- **[01-Studio_Basics](https://www.google.com/search?q=04-LangGraph_Studio/01-Studio_Basics/)**: Basic LangGraph Studio setup and usage.
 
 ---
 
