@@ -25,7 +25,7 @@ from langchain_community.document_loaders import WebBaseLoader, TextLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from langchain_core.documents import Document
-from langchain_core.messages import BaseMessage, HumanMessage
+from langchain_core.messages import BaseMessage, HumanMessage, ToolMessage
 from langchain_core.vectorstores import InMemoryVectorStore
 
 from langchain_openai import OpenAIEmbeddings
@@ -33,7 +33,7 @@ from langchain.chat_models import init_chat_model
 from langchain.tools import tool
 
 from langgraph.graph import MessagesState, StateGraph, START, END
-from langgraph.prebuilt import ToolNode, tools_condition
+from langgraph.prebuilt import ToolNode
 from rich import print
 from langchain_ollama import ChatOllama, OllamaEmbeddings
 from dotenv import load_dotenv
@@ -182,26 +182,41 @@ def build_graph(retriever_tool):
         response = chat_model.invoke([{"role": "user", "content": prompt}])
         return {"messages": [response]}
 
+    def fallback_retrieve(state: MessagesState):
+        """Retrieve docs directly when the model skips tool calling."""
+        question = latest_user_question(state["messages"])
+        context = retriever_tool.invoke({"query": question})
+        return {
+            "messages": [ToolMessage(content=context, tool_call_id="retriever_fallback")]
+        }
+
+    def route_after_generate(state: MessagesState) -> Literal["retrieve", "fallback_retrieve"]:
+        last_message = state["messages"][-1]
+        tool_calls = getattr(last_message, "tool_calls", None) or []
+        return "retrieve" if tool_calls else "fallback_retrieve"
+
     # Define the state machine structure
     workflow = StateGraph(MessagesState)
 
     # Register processing nodes
     workflow.add_node(generate_query_or_respond)
     workflow.add_node("retrieve", ToolNode([retriever_tool]))
+    workflow.add_node("fallback_retrieve", fallback_retrieve)
     workflow.add_node(rewrite_question)
     workflow.add_node(generate_answer)
 
     workflow.add_edge(START, "generate_query_or_respond")
 
-    # Determine if a tool call was made or if we can terminate early
+    # Determine if a tool call was made or if we should fall back
     workflow.add_conditional_edges(
         "generate_query_or_respond",
-        tools_condition,
-        {"tools": "retrieve", END: END},
+        route_after_generate,
+        {"retrieve": "retrieve", "fallback_retrieve": "fallback_retrieve"},
     )
 
     # Route logic based on context relevance after retrieval
     workflow.add_conditional_edges("retrieve", grade_documents)
+    workflow.add_conditional_edges("fallback_retrieve", grade_documents)
     workflow.add_edge("rewrite_question", "generate_query_or_respond")
     workflow.add_edge("generate_answer", END)
 
@@ -215,8 +230,8 @@ def parse_args():
     p = argparse.ArgumentParser()
     p.add_argument("--urls", nargs="*", default=None, help="URLs to index")
     p.add_argument("--paths", nargs="*", default=None, help="Local .txt/.md files or directories to index")
-    p.add_argument("--chunk-size", type=int, default=500)
-    p.add_argument("--chunk-overlap", type=int, default=100)
+    p.add_argument("--chunk-size", type=int, default=1000)
+    p.add_argument("--chunk-overlap", type=int, default=200)
     p.add_argument("--k", type=int, default=4, help="Top-K retrieved chunks")
     p.add_argument("--stream", action="store_true", help="Print per-node updates like the tutorial")
     # help text updated to reflect streaming behavior
