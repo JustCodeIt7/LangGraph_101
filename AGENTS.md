@@ -29,6 +29,39 @@ make integration_tests
 make test_watch
 ```
 
+## Project Preferences
+
+###  Agent Type
+
+- Use LangGraph for agent development
+- Use LangChain for LLM integration
+- LLM provider: Ollama
+
+``` python
+from langchain_ollama import ChatOllama, OllamaEmbeddings
+from dotenv import load_dotenv
+load_dotenv()
+
+################# Model Initialization ################
+
+OLLAMA_BASE_URL = os.getenv('OLLAMA_BASE_URL', 'http://localhost:11434')
+MODEL_NAME = 'llama3.2'
+
+# Initialize the LLM client with local Ollama settings
+model = ChatOllama(
+    model=MODEL_NAME,
+    temperature=0.2,  # Lower temperature for more consistent evaluations
+    base_url=OLLAMA_BASE_URL,
+)
+
+embeddings = OllamaEmbeddings(
+    model='nomic-embed-text:latest',
+    base_url=OLLAMA_BASE_URL,
+)
+```
+
+
+
 ## Code Style Guidelines
 
 ### Imports

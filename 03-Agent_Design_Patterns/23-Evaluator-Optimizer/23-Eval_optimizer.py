@@ -5,7 +5,10 @@ from langgraph.graph import StateGraph, END
 from rich import print
 from pydantic import BaseModel, Field
 from langchain_openai import ChatOpenAI
-from langchain_ollama import ChatOllama
+from langchain_ollama import ChatOllama, OllamaEmbeddings
+from dotenv import load_dotenv
+
+load_dotenv()
 
 ################# Model Initialization ################
 
