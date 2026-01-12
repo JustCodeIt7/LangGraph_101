@@ -8,15 +8,6 @@ Features (mirrors the LangGraph "agentic-rag" tutorial):
 - LLM decides: answer directly OR call a retriever tool
 - If retrieved context seems irrelevant, rewrite the question and retry
 - Otherwise, generate a grounded answer
-
-Run:
-  pip install -U langgraph "langchain[openai]" langchain-community langchain-text-splitters bs4
-  export OPENAI_API_KEY=...
-  python agentic_rag.py --stream
-
-Optional:
-  python agentic_rag.py --urls https://example.com/a https://example.com/b
-  python agentic_rag.py --paths ./docs ./more_docs
 """
 
 from __future__ import annotations
@@ -43,8 +34,8 @@ from langchain.tools import tool
 from langgraph.graph import MessagesState, StateGraph, START, END
 from langgraph.prebuilt import ToolNode, tools_condition
 
-
-# ---------------------------- Data ingestion ----------------------------
+#%%
+################################ Data Ingestion ################################
 
 DEFAULT_URLS = [
     "https://lilianweng.github.io/posts/2024-11-28-reward-hacking/",
@@ -52,17 +43,22 @@ DEFAULT_URLS = [
     "https://lilianweng.github.io/posts/2024-04-12-diffusion-video/",
 ]
 
+# Set a default user agent for web scraping
 os.environ.setdefault("USER_AGENT", "agentic-rag-demo/1.0 (contact: you@example.com)")
+
 def load_url_docs(urls: List[str]) -> List[Document]:
+    # Fetch content from a list of URLs
     docs_nested = [WebBaseLoader(u).load() for u in urls]
-    return [d for sub in docs_nested for d in sub]
+    return [d for sub in docs_nested for d in sub] # Flatten nested list of documents
 
 
 def load_path_docs(paths: List[str]) -> List[Document]:
+    # Load local text and markdown files from provided paths
     out: List[Document] = []
     for p in paths:
         path = Path(p)
         if path.is_dir():
+            # Recursively find all supported text files in the directory
             for fp in path.rglob("*"):
                 if fp.suffix.lower() in {".txt", ".md"}:
                     out.extend(TextLoader(str(fp), encoding="utf-8").load())
@@ -74,15 +70,17 @@ def load_path_docs(paths: List[str]) -> List[Document]:
 def split_docs(
     docs: List[Document], chunk_size: int = 500, chunk_overlap: int = 100
 ) -> List[Document]:
+    # Break large documents into smaller, overlapping chunks
     splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
         chunk_size=chunk_size, chunk_overlap=chunk_overlap
     )
     return splitter.split_documents(docs)
 
-
-# ---------------------------- Retriever tool ----------------------------
+#%%
+################################ Retriever Tool ################################
 
 def build_retriever_tool(doc_splits: List[Document], k: int = 4):
+    # Initialize a vector store in memory using OpenAI embeddings
     vectorstore = InMemoryVectorStore.from_documents(
         documents=doc_splits,
         embedding=OpenAIEmbeddings(model=os.getenv("EMBED_MODEL", "text-embedding-3-small")),
@@ -94,6 +92,7 @@ def build_retriever_tool(doc_splits: List[Document], k: int = 4):
         """Semantic search over the indexed documents. Returns relevant text snippets with sources."""
         docs = retriever.invoke(query)
         parts = []
+        # Format the retrieved chunks for the LLM to process
         for d in docs:
             src = d.metadata.get("source") or d.metadata.get("url") or "unknown"
             parts.append(f"SOURCE: {src}\n{d.page_content}")
@@ -101,10 +100,11 @@ def build_retriever_tool(doc_splits: List[Document], k: int = 4):
 
     return retrieve
 
-
-# ---------------------------- Graph nodes ----------------------------
+#%%
+################################ Graph Nodes ################################
 
 def latest_user_question(messages: List[BaseMessage]) -> str:
+    # Identify the most recent question asked by the user in the thread
     for m in reversed(messages):
         if isinstance(m, HumanMessage):
             return m.content
@@ -118,6 +118,7 @@ class GradeDocuments(BaseModel):
     )
 
 
+# Define system prompts for different stages of the agentic flow
 GRADE_PROMPT = (
     "You are a grader assessing relevance of retrieved context to a user question.\n"
     "Question:\n{question}\n\n"
@@ -143,6 +144,7 @@ GENERATE_PROMPT = (
 
 
 def build_graph(retriever_tool):
+    # Initialize chat and grader models with deterministic settings
     chat_model = init_chat_model(os.getenv("CHAT_MODEL", "gpt-4o-mini"), temperature=0)
     grader_model = init_chat_model(os.getenv("GRADER_MODEL", "gpt-4o-mini"), temperature=0)
 
@@ -154,7 +156,7 @@ def build_graph(retriever_tool):
     def grade_documents(state: MessagesState) -> Literal["generate_answer", "rewrite_question"]:
         """Route based on whether retrieved context seems relevant."""
         question = latest_user_question(state["messages"])
-        context = state["messages"][-1].content  # tool output
+        context = state["messages"][-1].content  # Extract content from tool output
         prompt = GRADE_PROMPT.format(question=question, context=context)
         verdict = grader_model.with_structured_output(GradeDocuments).invoke(
             [{"role": "user", "content": prompt}]
@@ -176,8 +178,10 @@ def build_graph(retriever_tool):
         response = chat_model.invoke([{"role": "user", "content": prompt}])
         return {"messages": [response]}
 
+    # Define the state machine structure
     workflow = StateGraph(MessagesState)
 
+    # Register processing nodes
     workflow.add_node(generate_query_or_respond)
     workflow.add_node("retrieve", ToolNode([retriever_tool]))
     workflow.add_node(rewrite_question)
@@ -185,24 +189,25 @@ def build_graph(retriever_tool):
 
     workflow.add_edge(START, "generate_query_or_respond")
 
-    # If the model called a tool -> "retrieve"; else end (direct answer)
+    # Determine if a tool call was made or if we can terminate early
     workflow.add_conditional_edges(
         "generate_query_or_respond",
         tools_condition,
         {"tools": "retrieve", END: END},
     )
 
-    # After retrieval, grade; if bad -> rewrite -> back to start; if good -> answer -> end
+    # Route logic based on context relevance after retrieval
     workflow.add_conditional_edges("retrieve", grade_documents)
     workflow.add_edge("rewrite_question", "generate_query_or_respond")
     workflow.add_edge("generate_answer", END)
 
     return workflow.compile()
 
-
-# ---------------------------- Simple CLI app ----------------------------
+#%%
+################################ Simple CLI App ################################
 
 def parse_args():
+    # Configure command line arguments for flexible usage
     p = argparse.ArgumentParser()
     p.add_argument("--urls", nargs="*", default=None, help="URLs to index")
     p.add_argument("--paths", nargs="*", default=None, help="Local .txt/.md files or directories to index")
@@ -216,6 +221,7 @@ def parse_args():
 def main():
     args = parse_args()
 
+    # Determine which sources to load based on arguments
     urls = args.urls if args.urls else DEFAULT_URLS
     path_docs = load_path_docs(args.paths) if args.paths else []
     url_docs = load_url_docs(urls) if urls else []
@@ -225,6 +231,7 @@ def main():
         print("No documents loaded. Provide --urls and/or --paths.", file=sys.stderr)
         sys.exit(1)
 
+    # Process documents and initialize the graph
     doc_splits = split_docs(docs, chunk_size=args.chunk_size, chunk_overlap=args.chunk_overlap)
     retriever_tool = build_retriever_tool(doc_splits, k=args.k)
     graph = build_graph(retriever_tool)
@@ -232,6 +239,7 @@ def main():
     messages: List[BaseMessage] = []
     print("Agentic RAG ready. Type '/exit' to quit.\n")
 
+    # Start the interactive chat loop
     while True:
         user_text = input("You> ").strip()
         if user_text.lower() in {"/exit", "/quit"}:
@@ -241,17 +249,18 @@ def main():
 
         messages.append(HumanMessage(content=user_text))
 
+        # Handle streaming vs batch execution
         if args.stream:
             last_state = None
             for chunk in graph.stream({"messages": messages}):
-                # chunk: {node_name: {"messages": [...]}}
+                # Extract and print updates from each node as they execute
                 for node, update in chunk.items():
                     last = update["messages"][-1]
                     print(f"\n--- update from {node} ---")
                     last.pretty_print()
                     last_state = update
             if last_state:
-                messages = last_state["messages"]
+                messages = last_state["messages"] # Sync message history
                 print()
         else:
             out = graph.invoke({"messages": messages})
