@@ -35,7 +35,9 @@ from langchain.tools import tool
 from langgraph.graph import MessagesState, StateGraph, START, END
 from langgraph.prebuilt import ToolNode, tools_condition
 from rich import print
-
+from langchain_ollama import ChatOllama, OllamaEmbeddings
+from dotenv import load_dotenv
+load_dotenv()
 #%%
 ################################ Data Ingestion ################################
 
@@ -82,10 +84,10 @@ def split_docs(
 ################################ Retriever Tool ################################
 
 def build_retriever_tool(doc_splits: List[Document], k: int = 4):
-    # Initialize a vector store in memory using OpenAI embeddings
+    # Initialize a vector store in memory using Ollama embeddings
     vectorstore = InMemoryVectorStore.from_documents(
         documents=doc_splits,
-        embedding=OpenAIEmbeddings(model=os.getenv("EMBED_MODEL", "text-embedding-3-small")),
+        embedding=OllamaEmbeddings(model="nomic-embed-text:latest", base_url=os.getenv("OLLAMA_BASE_URL")),
     )
     retriever = vectorstore.as_retriever(search_kwargs={"k": k})
 
@@ -147,8 +149,8 @@ GENERATE_PROMPT = (
 
 def build_graph(retriever_tool):
     # Initialize chat and grader models with deterministic settings
-    chat_model = init_chat_model(os.getenv("CHAT_MODEL", "gpt-4o-mini"), temperature=0)
-    grader_model = init_chat_model(os.getenv("GRADER_MODEL", "gpt-4o-mini"), temperature=0)
+    chat_model =  ChatOllama(model='gpt-oss:20b' , base_url=os.getenv("OLLAMA_BASE_URL"), temperature=0.1)
+    grader_model = ChatOllama(model='llama3.2' , temperature=0)
 
     def generate_query_or_respond(state: MessagesState):
         """LLM decides: answer directly, OR call the retriever tool."""
@@ -217,6 +219,8 @@ def parse_args():
     p.add_argument("--chunk-overlap", type=int, default=100)
     p.add_argument("--k", type=int, default=4, help="Top-K retrieved chunks")
     p.add_argument("--stream", action="store_true", help="Print per-node updates like the tutorial")
+    # help text updated to reflect streaming behavior
+    
     return p.parse_args()
 
 
@@ -250,12 +254,9 @@ def main():
         if not user_text:
             continue
 
-        # Check for dynamic file loading command: @file_path
-        file_matches = re.findall(r"@(\S+)", user_text)
-        if file_matches:
+        if file_matches := re.findall(r"@(\S+)", user_text):
             try:
-                new_docs = load_path_docs(file_matches)
-                if new_docs:
+                if new_docs := load_path_docs(file_matches):
                     new_splits = split_docs(new_docs, chunk_size=args.chunk_size, chunk_overlap=args.chunk_overlap)
                     vectorstore.add_documents(new_splits)
                     print(f"\n[System] Indexed {len(file_matches)} file(s) ({len(new_splits)} chunks).")
