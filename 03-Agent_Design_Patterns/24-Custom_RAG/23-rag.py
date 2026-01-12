@@ -37,7 +37,12 @@ from langgraph.prebuilt import ToolNode
 from rich import print
 from langchain_ollama import ChatOllama, OllamaEmbeddings
 from dotenv import load_dotenv
+import base64
+from IPython.display import HTML, display
+from langchain_core.runnables.graph_mermaid import MermaidDrawMethod
+
 load_dotenv()
+
 #%%
 ################################ Data Ingestion ################################
 
@@ -154,6 +159,7 @@ def build_graph(retriever_tool):
 
     def generate_query_or_respond(state: MessagesState):
         """LLM decides: answer directly, OR call the retriever tool."""
+        # Enable tool calling capabilities for the main assistant
         response = chat_model.bind_tools([retriever_tool]).invoke(state["messages"])
         return {"messages": [response]}
 
@@ -162,6 +168,7 @@ def build_graph(retriever_tool):
         question = latest_user_question(state["messages"])
         context = state["messages"][-1].content  # Extract content from tool output
         prompt = GRADE_PROMPT.format(question=question, context=context)
+        # Evaluate context quality using structured output
         verdict = grader_model.with_structured_output(GradeDocuments).invoke(
             [{"role": "user", "content": prompt}]
         )
@@ -191,6 +198,7 @@ def build_graph(retriever_tool):
         }
 
     def route_after_generate(state: MessagesState) -> Literal["retrieve", "fallback_retrieve"]:
+        # Check if the model generated tool calls or a direct response
         last_message = state["messages"][-1]
         tool_calls = getattr(last_message, "tool_calls", None) or []
         return "retrieve" if tool_calls else "fallback_retrieve"
@@ -234,10 +242,24 @@ def parse_args():
     p.add_argument("--chunk-overlap", type=int, default=200)
     p.add_argument("--k", type=int, default=4, help="Top-K retrieved chunks")
     p.add_argument("--stream", action="store_true", help="Print per-node updates like the tutorial")
-    # help text updated to reflect streaming behavior
     
     return p.parse_args()
 
+
+
+def draw_mermaid_png(agent, height="100vh", width="min(90vw, 500px)"):
+    """Render a Mermaid graph using the Mermaid.ink API for notebook display.
+
+    The diagram keeps its aspect ratio, shrinks if it would exceed the viewport
+    height, and otherwise stays readable without manual tuning.
+    """
+    png_bytes = agent.get_graph().draw_mermaid_png(draw_method=MermaidDrawMethod.API)
+    
+    b64_img = base64.b64encode(png_bytes).decode()
+    
+    # save to file for debugging
+    with open("graph.png", "wb") as f:
+        f.write(png_bytes)
 
 def main():
     args = parse_args()
@@ -257,6 +279,8 @@ def main():
     retriever_tool, vectorstore = build_retriever_tool(doc_splits, k=args.k)
     graph = build_graph(retriever_tool)
 
+    draw_mermaid_png(graph) 
+
     messages: List[BaseMessage] = []
     print("Agentic RAG ready. Type '/exit' to quit.\n")
     print("Type @/path/to/file.txt to index a file dynamically.\n")
@@ -269,11 +293,12 @@ def main():
         if not user_text:
             continue
 
+        # Check for dynamic file indexing syntax
         if file_matches := re.findall(r"@(\S+)", user_text):
             try:
                 if new_docs := load_path_docs(file_matches):
                     new_splits = split_docs(new_docs, chunk_size=args.chunk_size, chunk_overlap=args.chunk_overlap)
-                    vectorstore.add_documents(new_splits)
+                    vectorstore.add_documents(new_splits) # Update the existing vector store
                     print(f"\n[System] Indexed {len(file_matches)} file(s) ({len(new_splits)} chunks).")
                 else:
                     print(f"\n[System] Warning: No readable content found in {file_matches}")
@@ -285,6 +310,7 @@ def main():
         # Handle streaming vs batch execution
         if args.stream:
             last_state = None
+            # Iterate through graph updates as they happen
             for chunk in graph.stream({"messages": messages}):
                 # Extract and print updates from each node as they execute
                 for node, update in chunk.items():
@@ -296,6 +322,7 @@ def main():
                 messages = last_state["messages"] # Sync message history
                 print()
         else:
+            # Execute the full graph logic and retrieve final state
             out = graph.invoke({"messages": messages})
             messages = out["messages"]
             print()
