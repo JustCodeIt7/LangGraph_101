@@ -33,6 +33,7 @@ from langchain.tools import tool
 
 from langgraph.graph import MessagesState, StateGraph, START, END
 from langgraph.prebuilt import ToolNode, tools_condition
+from rich import print
 
 #%%
 ################################ Data Ingestion ################################
