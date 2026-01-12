@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import re
 import sys
 from pathlib import Path
 from typing import List, Literal
@@ -99,7 +100,7 @@ def build_retriever_tool(doc_splits: List[Document], k: int = 4):
             parts.append(f"SOURCE: {src}\n{d.page_content}")
         return "\n\n---\n\n".join(parts)
 
-    return retrieve
+    return retrieve, vectorstore
 
 #%%
 ################################ Graph Nodes ################################
@@ -234,11 +235,12 @@ def main():
 
     # Process documents and initialize the graph
     doc_splits = split_docs(docs, chunk_size=args.chunk_size, chunk_overlap=args.chunk_overlap)
-    retriever_tool = build_retriever_tool(doc_splits, k=args.k)
+    retriever_tool, vectorstore = build_retriever_tool(doc_splits, k=args.k)
     graph = build_graph(retriever_tool)
 
     messages: List[BaseMessage] = []
     print("Agentic RAG ready. Type '/exit' to quit.\n")
+    print("Type @/path/to/file.txt to index a file dynamically.\n")
 
     # Start the interactive chat loop
     while True:
@@ -247,6 +249,20 @@ def main():
             break
         if not user_text:
             continue
+
+        # Check for dynamic file loading command: @file_path
+        file_matches = re.findall(r"@(\S+)", user_text)
+        if file_matches:
+            try:
+                new_docs = load_path_docs(file_matches)
+                if new_docs:
+                    new_splits = split_docs(new_docs, chunk_size=args.chunk_size, chunk_overlap=args.chunk_overlap)
+                    vectorstore.add_documents(new_splits)
+                    print(f"\n[System] Indexed {len(file_matches)} file(s) ({len(new_splits)} chunks).")
+                else:
+                    print(f"\n[System] Warning: No readable content found in {file_matches}")
+            except Exception as e:
+                print(f"\n[System] Error loading files: {e}")
 
         messages.append(HumanMessage(content=user_text))
 
