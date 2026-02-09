@@ -7,23 +7,11 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langgraph.graph import StateGraph, END
 from langchain_community.document_loaders import PDFPlumberLoader, TextLoader
+from dotenv import load_dotenv
 
+load_dotenv()
 # --- Configuration & Setup ---
 llm_model = 'llama3.2'  # Using a lightweight model
-st.set_page_config(page_title='Legal Doc Analyzer', layout='wide')
-
-# --- UI Styling ---
-st.markdown(
-    """
-    <style>
-    .stApp { background-color: #f0f2f6; }
-    h1 { color: #1f77b4; }
-    .stButton>button { background-color: #1f77b4; color: white; border-radius: 5px; }
-    .report-box { background-color: white; padding: 20px; border-radius: 10px; box-shadow: 2px 2px 10px rgba(0,0,0,0.1); margin-bottom: 20px;}
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
 
 
 # --- State Definition ---
@@ -62,7 +50,9 @@ def suggest_improvements_node(state: AgentState):
     prompt = ChatPromptTemplate.from_template(
         'You are an expert legal assistant. Suggest clause improvements or missing protections for this document:\n\n{text}'
     )
-    chain = prompt | ChatOllama(model=llm_model) | StrOutputParser()
+    chain = (
+        prompt | ChatOllama(model=llm_model, temperature=0.3, base_url=os.getenv('OLLAMA_BASE_URL')) | StrOutputParser()
+    )
     return {'suggestions': chain.invoke({'text': text[:10000]})}
 
 
@@ -81,22 +71,23 @@ def compile_report_node(state: AgentState):
     return {'final_report': report}
 
 
-# --- Graph Construction ---
-workflow = StateGraph(AgentState)
+# --- reuseable method ---
+def create_workflow():
+    workflow = StateGraph(AgentState)
 
-workflow.add_node('summarize', summarize_node)
-workflow.add_node('analyze_risks', analyze_risks_node)
-workflow.add_node('suggest_improvements', suggest_improvements_node)
-workflow.add_node('compile_report', compile_report_node)
+    workflow.add_node('summarize', summarize_node)
+    workflow.add_node('analyze_risks', analyze_risks_node)
+    workflow.add_node('suggest_improvements', suggest_improvements_node)
+    workflow.add_node('compile_report', compile_report_node)
 
-# Run parallel analysis
-workflow.set_entry_point('summarize')
-workflow.add_edge('summarize', 'analyze_risks')
-workflow.add_edge('analyze_risks', 'suggest_improvements')
-workflow.add_edge('suggest_improvements', 'compile_report')
-workflow.add_edge('compile_report', END)
+    # Run parallel analysis
+    workflow.set_entry_point('summarize')
+    workflow.add_edge('summarize', 'analyze_risks')
+    workflow.add_edge('analyze_risks', 'suggest_improvements')
+    workflow.add_edge('suggest_improvements', 'compile_report')
+    workflow.add_edge('compile_report', END)
 
-app = workflow.compile()
+    return workflow.compile()
 
 
 # --- Helper Functions ---
@@ -120,14 +111,39 @@ def load_doc(uploaded_file):
     return text
 
 
+def analyze_document(doc_text):
+    """
+    Analyzes the document and returns the final report.
+    """
+    app = create_workflow()
+    initial_state = {'original_text': doc_text}
+    result = app.invoke(initial_state)
+
+    st.markdown('## 📊 Analysis Report')
+
+    with st.container():
+        st.markdown(f"<div class='report-box'>{result['final_report']}</div>", unsafe_allow_html=True)
+
+    st.download_button('Download Report', result['final_report'], file_name='legal_analysis.md')
+
+
 # --- Main App Interface ---
-st.title('⚖️ AI Legal Document Analyzer')
-st.markdown('Upload a contract or legal document to get an instant AI-powered analysis.')
+def main():
+    st.set_page_config(page_title='Legal Doc Analyzer', layout='wide')
 
-uploaded_file = st.file_uploader('Upload Legal Document (PDF or TXT)', type=['pdf', 'txt'])
+    # --- UI Styling ---
 
-if uploaded_file:
-    if st.button('Analyze Document'):
+    # Sidebar
+    with st.sidebar:
+        st.header('Upload Document')
+        uploaded_file = st.file_uploader('Upload Legal Document (PDF or TXT)', type=['pdf', 'txt'])
+
+        st.text(f'Model: {llm_model}')
+
+    st.title('⚖️ AI Legal Document Analyzer')
+    st.markdown('Upload a contract or legal document to get an instant AI-powered analysis.')
+
+    if uploaded_file and st.button('Analyze Document'):
         with st.spinner('Reading document...'):
             doc_text = load_doc(uploaded_file)
 
@@ -135,24 +151,8 @@ if uploaded_file:
             st.error('Could not extract text from document.')
         else:
             with st.spinner('Analyzing with AI Agents...'):
-                initial_state = {'original_text': doc_text}
-                result = app.invoke(initial_state)
+                analyze_document(doc_text)
 
-                st.markdown('## 📊 Analysis Report')
 
-                with st.container():
-                    st.markdown(f"<div class='report-box'>{result['final_report']}</div>", unsafe_allow_html=True)
-
-                st.download_button('Download Report', result['final_report'], file_name='legal_analysis.md')
-
-# Sidebar
-with st.sidebar:
-    st.header('About')
-    st.info('This tool uses **LangGraph** to orchestrate AI agents for legal analysis.')
-    st.markdown("""
-    **Pipeline:**
-    1. **Summarizer Agent**: Extracts key points.
-    2. **Risk Agent**: Finds liabilities.
-    3. **Advisor Agent**: Suggests improvements.
-    """)
-    st.text(f'Model: {llm_model}')
+if __name__ == '__main__':
+    main()
