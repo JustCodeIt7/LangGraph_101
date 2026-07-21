@@ -10,6 +10,7 @@ license = "MIT"
 dependencies = [
     "langchain-anthropic>=0.3.14",
     "langgraph>=0.1.0",
+    "pydantic-ai-harness>=0.8.0",
 ]
 
 [tool.setuptools.packages.find]
