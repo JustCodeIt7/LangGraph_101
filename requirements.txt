@@ -1,6 +1,8 @@
 langgraph
 langchain_openai
 langchain_ollama
+openai
+mlx-whisper
 yfinance
 requests
 litellm
@@ -10,5 +12,6 @@ python-dotenv
 langchain-core
 typing_extensions
 langchain
+langchain-community
 pydantic
 asyncio
