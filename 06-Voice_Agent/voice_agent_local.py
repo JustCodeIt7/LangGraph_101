@@ -28,8 +28,9 @@ import subprocess
 from pathlib import Path
 
 from dotenv import load_dotenv
+from langchain.agents import create_agent
+from langchain_core.messages import HumanMessage
 from langchain_core.tools import tool
-from langgraph.prebuilt import create_react_agent
 from rich.console import Console
 
 load_dotenv()
@@ -91,7 +92,7 @@ def build_agent(model_name: str = "ollama:llama3.2"):
     clean_name = model_name.removeprefix("ollama:")
     llm = ChatOllama(model=clean_name, temperature=0.3)
     tools = [get_weather, calculate]
-    return create_react_agent(model=llm, tools=tools)
+    return create_agent(model=llm, tools=tools)
 
 
 # ── 4. Text-to-Speech: use macOS built-in `say` command (local) ───────────────
@@ -126,8 +127,14 @@ def run_voice_agent(
     # Step 2 — Run through the LangGraph ReAct agent with tools
     console.print(f"[cyan]Running[/cyan] LangGraph ReAct agent ({llm_model}) ...")
     agent = build_agent(llm_model)
-    result = agent.invoke({"messages": [("user", user_text)]})
-    response_text = result["messages"][-1].content
+    result = agent.invoke({"messages": [HumanMessage(content=user_text)]})
+
+    # Extract response from the last message in the state
+    messages = result.get("messages", [])
+    if messages:
+        response_text = messages[-1].content
+    else:
+        response_text = ""
 
     if not isinstance(response_text, str):
         response_text = str(response_text)
