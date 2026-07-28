@@ -38,6 +38,22 @@ LangGraph_101/
 └── Docling_File_Processer/       # Document processing with DocLing
 ```
 
+## Python Environment
+
+This project uses the conda env **`py312`** (Python 3.12). Activate before running anything:
+
+```bash
+conda activate py312
+```
+
+Or invoke the interpreter directly without activation:
+
+```bash
+/Users/james/miniconda3/envs/py312/bin/python <script.py>
+```
+
+All `python`, `pip`, `make`, and `pytest` commands below assume this env is active.
+
 ## Build/Lint/Test Commands
 
 ### Formatting & Linting
